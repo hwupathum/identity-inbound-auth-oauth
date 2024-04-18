@@ -51,7 +51,6 @@ import java.util.stream.Collectors;
 public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
 
     private static final Log LOG = LogFactory.getLog(DefaultOAuth2ScopeValidator.class);
-    public static final String AUDIENCE_EQ_ORGANIZATION = "audience eq organization";
 
     @Override
     public boolean canHandle(ScopeValidationContext scopeValidationContext) {

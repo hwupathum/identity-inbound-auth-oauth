@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.RoleV2;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -125,13 +126,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         } else {
              /*If the application allowed audience is organization, associate all organization roles with the
              application*/
-            RoleManagementService roleManagementService = OAuthComponentServiceHolder.getInstance().
-                    getRoleV2ManagementService();
-
-            List<RoleBasicInfo> listOfOrganizationRolesInfo = roleManagementService.
-                    getRoles(RoleConstants.AUDIENCE + " " + RoleConstants.EQ + " " + RoleConstants.ORGANIZATION
-                            , 0, 0, null, null, tenantDomain);
-            rolesAssociatedWithApp = listOfOrganizationRolesInfo.stream()
+            rolesAssociatedWithApp = getAllOrganizationRoles(tenantDomain).stream()
                     .map(RoleBasicInfo::getId)
                     .collect(Collectors.toList());
         }
@@ -142,6 +137,27 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                 .collect(Collectors.toList());
     }
 
+    private List<RoleBasicInfo> getAllOrganizationRoles(String tenantDomain) throws IdentityRoleManagementException {
+
+        RoleManagementService roleManagementService = OAuthComponentServiceHolder.getInstance()
+                .getRoleV2ManagementService();
+        List<RoleBasicInfo> chunkOfRoles;
+        int offset = 0;
+        int maximumPage = IdentityUtil.getMaximumItemPerPage();
+        List<RoleBasicInfo> allRoles = new ArrayList<>();
+        if (roleManagementService != null) {
+            do {
+                chunkOfRoles = roleManagementService.getRoles(RoleConstants.AUDIENCE + " " +
+                                RoleConstants.EQ + " " + RoleConstants.ORGANIZATION, maximumPage, offset, null,
+                        null, tenantDomain);
+                if (!chunkOfRoles.isEmpty()) {
+                    allRoles.addAll(chunkOfRoles);
+                    offset += chunkOfRoles.size(); // Move to the next chunk
+                }
+            } while (!chunkOfRoles.isEmpty());
+        }
+        return allRoles;
+    }
 
     /**
      * Get application allowed audience.

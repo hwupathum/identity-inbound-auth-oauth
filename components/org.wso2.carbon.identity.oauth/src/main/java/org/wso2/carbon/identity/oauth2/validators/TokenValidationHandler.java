@@ -22,12 +22,14 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -599,18 +601,9 @@ public class TokenValidationHandler {
             // Add authenticated user object since username attribute may not have the domain appended if the
             // subject identifier is built based in the SP config.
             introResp.setAuthorizedUser(accessTokenDO.getAuthzUser());
-
+            // Set audience if the token is not a JWT.
             if (!OAuth2Util.isJWT(validationRequest.getAccessToken().getIdentifier())) {
-                OAuthAppDO oAuthAppDO;
-                try {
-                    String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                    oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(), tenantDomain);
-                } catch (InvalidOAuthClientException e) {
-                    throw new IdentityOAuth2Exception("Error while retrieving OAuth app information for clientId: " +
-                            accessTokenDO.getConsumerKey());
-                }
-                List<String> audience = OAuth2Util.getOIDCAudience(accessTokenDO.getConsumerKey(), oAuthAppDO);
-                introResp.setAud(String.join(",", audience));
+                addAudienceToIntrospectionResponse(introResp, accessTokenDO);
             }
         }
 
@@ -873,5 +866,24 @@ public class TokenValidationHandler {
         String[] validatedScopes = accessTokenDO.getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(validatedScopes, requestedAllowedScopes);
         introResp.setScope(OAuth2Util.buildScopeString((scopesToReturn)));
+    }
+
+    private void addAudienceToIntrospectionResponse(OAuth2IntrospectionResponseDTO introResp,
+                                                    AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+
+        String tenantDomain = null;
+        try {
+            int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
+            if (appResidentTenantId != MultitenantConstants.INVALID_TENANT_ID) {
+                tenantDomain = IdentityTenantUtil.getTenantDomain(appResidentTenantId);
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
+                        tenantDomain);
+                List<String> audience = OAuth2Util.getOIDCAudience(accessTokenDO.getConsumerKey(), oAuthAppDO);
+                introResp.setAud(String.join(",", audience));
+            }
+        } catch (InvalidOAuthClientException e) {
+            log.warn("Unable to set the audience in the introspection response. Failed to retrieve the " +
+                    "application for client id: " + accessTokenDO.getConsumerKey() + " in tenant: " + tenantDomain);
+        }
     }
 }

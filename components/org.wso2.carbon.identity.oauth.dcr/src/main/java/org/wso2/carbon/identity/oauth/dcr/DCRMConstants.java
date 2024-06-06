@@ -55,7 +55,9 @@ public class DCRMConstants {
         TENANT_DOMAIN_MISMATCH("NOT_FOUND_60001", "Tenant domain in request does not match with the application " +
                 "tenant domain for consumer key: %s"),
         FAILED_TO_VALIDATE_TENANT_DOMAIN("Error occurred during validating tenant domain for consumer key: %s"),
-        SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement");
+        SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement"),
+        FAILED_TO_READ_SSA("Error occurred while reading the software statement"),
+        ADDITIONAL_ATTRIBUTE_ERROR("Error occurred while handling additional attributes");
 
         private final String message;
         private final String errorCode;

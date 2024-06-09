@@ -51,6 +51,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private String[] authorizedInternalScopes;
 
     private boolean isConsentedToken;
+    private boolean isSubjectTokenFlow;
 
     private Properties properties = new Properties();
 
@@ -199,5 +200,15 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setConsentedToken(boolean consentedToken) {
 
         isConsentedToken = consentedToken;
+    }
+
+    public boolean isSubjectTokenFlow() {
+
+        return isSubjectTokenFlow;
+    }
+
+    public void setSubjectTokenFlow(boolean subjectTokenFlow) {
+
+        isSubjectTokenFlow = subjectTokenFlow;
     }
 }

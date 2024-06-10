@@ -90,8 +90,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ALLOW_SESSION_CREATION;
-
-
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.BASIC_AUTHENTICATOR_CLASS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.SHOW_AUTHFAILURE_RESON_CONFIG;
 

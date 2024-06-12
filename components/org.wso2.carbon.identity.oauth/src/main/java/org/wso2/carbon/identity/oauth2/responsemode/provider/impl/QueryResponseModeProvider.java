@@ -81,7 +81,6 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
             long validityPeriod = authorizationResponseDTO.getSuccessResponseDTO().getValidityPeriod();
             String scope = authorizationResponseDTO.getSuccessResponseDTO().getScope();
             String authenticatedIdPs = authorizationResponseDTO.getAuthenticatedIDPs();
-            String subjectToken = authorizationResponseDTO.getSuccessResponseDTO().getSubjectToken();
             List<String> queryParams = new ArrayList<>();
             if (accessToken != null) {
                 queryParams.add(OAuthConstants.ACCESS_TOKEN_RESPONSE_PARAM + "=" + accessToken);
@@ -114,10 +113,6 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
 
             if (scope != null) {
                 queryParams.add(OAuthConstants.SCOPE + "=" + scope);
-            }
-
-            if (StringUtils.isNotBlank(subjectToken)) {
-                queryParams.add(OAuthConstants.SUBJECT_TOKEN + "=" + subjectToken);
             }
 
             redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,

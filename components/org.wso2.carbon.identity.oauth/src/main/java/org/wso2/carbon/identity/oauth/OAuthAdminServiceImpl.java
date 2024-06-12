@@ -474,8 +474,6 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
-                        app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
-                        app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
                     }
                     dao.addOAuthApplication(app);
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -893,8 +891,6 @@ public class OAuthAdminServiceImpl {
             }
             oauthappdo.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
             oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
-            oauthappdo.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
-            oauthappdo.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);

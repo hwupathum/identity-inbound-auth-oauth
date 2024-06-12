@@ -676,16 +676,6 @@ public class OAuth2Util {
     }
 
     /**
-     * Checks if the support for subject tokens is enabled in the OAuth server configuration.
-     *
-     * @return true if subject token support is enabled, false otherwise.
-     */
-    public static boolean isSubjectTokenSupportEnabled() {
-
-        return OAuthServerConfiguration.getInstance().isSubjectTokenSupportEnabled();
-    }
-
-    /**
      * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
      * configuration is enabled or not in identity.xml file.
      *

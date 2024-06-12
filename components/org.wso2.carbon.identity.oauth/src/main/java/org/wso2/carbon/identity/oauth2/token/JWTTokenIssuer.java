@@ -68,7 +68,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
@@ -98,9 +97,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String TOKEN_BINDING_REF = "binding_ref";
     private static final String TOKEN_BINDING_TYPE = "binding_type";
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
-    private static final String JWT_TYP_HEADER_VALUE = "jwt";
-    private static final String MAY_ACT = "may_act";
-    private static final String SUB = "sub";
     private static final String CNF = "cnf";
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
@@ -132,94 +128,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthSystemException(e);
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String issueSubjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Subject token request with authorization request message context message context. " +
-                    "user " + oauthAuthzMsgCtx.getAuthorizationReqDTO().getUser().getLoggableUserId());
-        }
-
-        return this.buildSubjectJWTToken(oauthAuthzMsgCtx);
-    }
-
-    private String buildSubjectJWTToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
-
-        JWTClaimsSet jwtClaimsSet = createSubjectTokenJWTClaimSet(oauthAuthzMsgCtx);
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
-        jwtClaimsSet = jwtClaimsSetBuilder.build();
-
-        if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
-            return new PlainJWT(jwtClaimsSet).serialize();
-        }
-        return signJWT(jwtClaimsSet, null, oauthAuthzMsgCtx);
-    }
-
-    private JWTClaimsSet createSubjectTokenJWTClaimSet(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
-            throws IdentityOAuth2Exception {
-
-        String consumerKey = oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey();
-        // loading the stored application data
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
-        }
-
-        String spTenantDomain;
-        if (oAuthAppDO.getSubjectTokenExpiryTime() <= 0) {
-            oAuthAppDO.setSubjectTokenExpiryTime(SUBJECT_TOKEN_EXPIRY_TIME_VALUE);
-        }
-        int subjectTokenLifeTimeInSec = oAuthAppDO.getSubjectTokenExpiryTime() * 1000;;
-
-        spTenantDomain = oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain();
-
-        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
-        long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
-
-        AuthenticatedUser authenticatedUser = getAuthenticatedUser(oauthAuthzMsgCtx, null);
-        String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
-
-        String subject = oauthAuthzMsgCtx.getAuthorizationReqDTO().getRequestedSubjectId();
-
-        // Set the default claims.
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-        jwtClaimsSetBuilder.issuer(issuer);
-        jwtClaimsSetBuilder.subject(subject);
-        String scope = getScope(oauthAuthzMsgCtx, null);
-        if (StringUtils.isNotEmpty(scope)) {
-            jwtClaimsSetBuilder.claim(SCOPE, scope);
-        }
-
-        jwtClaimsSetBuilder.claim(AUTHORIZATION_PARTY, consumerKey);
-        jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
-        jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
-        jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
-        jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
-
-        jwtClaimsSetBuilder.claim(MAY_ACT, Collections.singletonMap(SUB, sub));
-        jwtClaimsSetBuilder.expirationTime(calculateSubjectTokenExpiryTime(subjectTokenLifeTimeInSec,
-                curTimeInMillis));
-        List<String> audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
-        jwtClaimsSetBuilder.audience(audience);
-
-        return jwtClaimsSetBuilder.build();
-    }
-
-    private Date calculateSubjectTokenExpiryTime(long accessTokenLifeTimeInMillis, long curTimeInMillis) {
-
-        Date expirationTime =  new Date(curTimeInMillis + accessTokenLifeTimeInMillis);
-
-        if (log.isDebugEnabled()) {
-            log.debug("Subject token expiry time : " + expirationTime + "ms.");
-        }
-        return expirationTime;
     }
 
     @Override
@@ -472,12 +380,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
-            if (authorizationContext != null && authorizationContext.isSubjectTokenFlow()) {
-                headerBuilder.type(new JOSEObjectType(JWT_TYP_HEADER_VALUE));
-            } else {
-                // Set the required "typ" header "at+jwt" for access tokens issued by the issuer
-                headerBuilder.type(new JOSEObjectType(DEFAULT_TYP_HEADER_VALUE));
-            }
+            // Set the required "typ" header "at+jwt" for access tokens issued by the issuer
+            headerBuilder.type(new JOSEObjectType(DEFAULT_TYP_HEADER_VALUE));
             headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);

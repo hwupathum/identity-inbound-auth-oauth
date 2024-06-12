@@ -90,8 +90,6 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private boolean fapiConformanceEnabled;
-    private boolean subjectTokenEnabled;
-    private int subjectTokenExpiryTime = 180;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -472,25 +470,5 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setFapiConformanceEnabled(boolean fapiConformant) {
 
         fapiConformanceEnabled = fapiConformant;
-    }
-
-    public boolean isSubjectTokenEnabled() {
-
-        return subjectTokenEnabled;
-    }
-
-    public void setSubjectTokenEnabled(boolean subjectTokenEnabled) {
-
-        this.subjectTokenEnabled = subjectTokenEnabled;
-    }
-
-    public int getSubjectTokenExpiryTime() {
-
-        return subjectTokenExpiryTime;
-    }
-
-    public void setSubjectTokenExpiryTime(int subjectTokenExpiryTime) {
-
-        this.subjectTokenExpiryTime = subjectTokenExpiryTime;
     }
 }

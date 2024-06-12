@@ -19,9 +19,7 @@
 
 package org.wso2.carbon.identity.oauth2.token;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 
 /**
@@ -87,16 +85,5 @@ public interface OauthTokenIssuer {
      */
     default boolean usePersistedAccessTokenAlias() {
         return true;
-    }
-
-    /**
-     * Generates a subject token based on the OAuth authorization request message context.
-     *
-     * @param oauthAuthzMsgCtx the OAuth authorization request message context containing relevant information.
-     * @return the subject token generated for the OAuth authorization request
-     * @throws IdentityOAuth2Exception if an error occurs while generating the subject token
-     */
-    default String issueSubjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
-        return StringUtils.EMPTY;
     }
 }

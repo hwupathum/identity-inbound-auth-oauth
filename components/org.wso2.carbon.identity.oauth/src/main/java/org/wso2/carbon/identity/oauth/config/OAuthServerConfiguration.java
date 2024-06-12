@@ -320,6 +320,7 @@ public class OAuthServerConfiguration {
     private String deviceAuthzEPUrl = null;
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
+    private boolean subjectTokenSupportEnabled = false;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -2691,6 +2692,11 @@ public class OAuthServerConfiguration {
                 }
                 if (responseTypeName != null && !"".equals(responseTypeName) &&
                         responseTypeHandlerImplClass != null && !"".equals(responseTypeHandlerImplClass)) {
+
+                    // check for the support of subject token
+                    if (responseTypeName.contains("subject_token")) {
+                        subjectTokenSupportEnabled = true;
+                    }
                     supportedResponseTypeClassNames.put(responseTypeName, responseTypeHandlerImplClass);
                     OMElement responseTypeValidatorClassNameElement = supportedResponseTypeElement
                             .getFirstChildWithName(
@@ -3691,6 +3697,11 @@ public class OAuthServerConfiguration {
     public List<String> getSupportedTokenEndpointSigningAlgorithms() {
 
         return supportedTokenEndpointSigningAlgorithms;
+    }
+
+    public boolean isSubjectTokenSupportEnabled() {
+
+        return subjectTokenSupportEnabled;
     }
 
     /**

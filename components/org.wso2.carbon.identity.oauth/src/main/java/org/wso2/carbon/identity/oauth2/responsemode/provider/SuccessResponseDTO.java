@@ -32,7 +32,6 @@ public class SuccessResponseDTO {
     private String tokenType;
     private long validityPeriod;
     private String formPostBody;
-    private String subjectToken;
     private Set<String> scope = null;
 
     public String getAuthorizationCode() {
@@ -106,15 +105,5 @@ public class SuccessResponseDTO {
     public void setFormPostBody(String formPostBody) {
 
         this.formPostBody = formPostBody;
-    }
-
-    public String getSubjectToken() {
-
-        return subjectToken;
-    }
-
-    public void setSubjectToken(String subjectToken) {
-
-        this.subjectToken = subjectToken;
     }
 }

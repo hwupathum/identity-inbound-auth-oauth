@@ -119,6 +119,7 @@ public class OAuthServerConfiguration {
     private static final String JWT_TOKEN_ISSUER_CLASS =
             "org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer";
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
+    private static final String SUBJECT_TOKEN = "subject_token";
     private static final Log log = LogFactory.getLog(OAuthServerConfiguration.class);
     private static OAuthServerConfiguration instance;
     private static String oauth1RequestTokenUrl = null;
@@ -320,6 +321,7 @@ public class OAuthServerConfiguration {
     private String deviceAuthzEPUrl = null;
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
+    private boolean subjectTokenSupportEnabled = false;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -2691,6 +2693,11 @@ public class OAuthServerConfiguration {
                 }
                 if (responseTypeName != null && !"".equals(responseTypeName) &&
                         responseTypeHandlerImplClass != null && !"".equals(responseTypeHandlerImplClass)) {
+
+                    // check for the support of subject token
+                    if (responseTypeName.contains(SUBJECT_TOKEN)) {
+                        subjectTokenSupportEnabled = true;
+                    }
                     supportedResponseTypeClassNames.put(responseTypeName, responseTypeHandlerImplClass);
                     OMElement responseTypeValidatorClassNameElement = supportedResponseTypeElement
                             .getFirstChildWithName(
@@ -3691,6 +3698,11 @@ public class OAuthServerConfiguration {
     public List<String> getSupportedTokenEndpointSigningAlgorithms() {
 
         return supportedTokenEndpointSigningAlgorithms;
+    }
+
+    public boolean isSubjectTokenSupportEnabled() {
+
+        return subjectTokenSupportEnabled;
     }
 
     /**

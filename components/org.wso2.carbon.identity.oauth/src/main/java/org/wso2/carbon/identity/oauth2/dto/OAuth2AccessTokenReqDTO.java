@@ -61,6 +61,10 @@ public class OAuth2AccessTokenReqDTO {
     private Map<String, String> parameters;
 
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
+    private String subjectToken;
+    private String actorToken;
+    private String subjectTokenType;
+    private String actorTokenType;
 
     public String getClientId() {
         return clientId;
@@ -251,5 +255,45 @@ public class OAuth2AccessTokenReqDTO {
 
     public void setHttpServletResponseWrapper(HttpServletResponseWrapper httpServletResponseWrapper) {
         this.httpServletResponseWrapper = httpServletResponseWrapper;
+    }
+
+    public String getSubjectToken() {
+
+        return subjectToken;
+    }
+
+    public void setSubjectToken(String subjectToken) {
+
+        this.subjectToken = subjectToken;
+    }
+
+    public String getActorToken() {
+
+        return actorToken;
+    }
+
+    public void setActorToken(String actorToken) {
+
+        this.actorToken = actorToken;
+    }
+
+    public String getSubjectTokenType() {
+
+        return subjectTokenType;
+    }
+
+    public void setSubjectTokenType(String subjectTokenType) {
+
+        this.subjectTokenType = subjectTokenType;
+    }
+
+    public String getActorTokenType() {
+
+        return actorTokenType;
+    }
+
+    public void setActorTokenType(String actorTokenType) {
+
+        this.actorTokenType = actorTokenType;
     }
 }

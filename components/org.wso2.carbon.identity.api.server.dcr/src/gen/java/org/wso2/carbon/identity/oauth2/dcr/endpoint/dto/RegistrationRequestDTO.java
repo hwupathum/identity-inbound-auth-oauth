@@ -474,7 +474,6 @@ public class RegistrationRequestDTO  {
     return additionalAttributes;
   }
 
-
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();

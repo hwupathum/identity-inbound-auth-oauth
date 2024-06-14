@@ -75,7 +75,7 @@ public interface AdditionalAttributeFilter {
      * Get the keys of additional attributes to be returned in the DCR register, update and get responses.
      * @return List of attribute keys.
      */
-    List<String> getResponseAttKeys();
+    List<String> getResponseAttributeKeys();
 
 
 }

@@ -108,8 +108,7 @@ public class DCRMService {
         if (StringUtils.isNotEmpty(jwksURI)) {
             consumerAppDTO.setJwksURI(jwksURI);
         }
-        Application application;
-        application = buildResponse(consumerAppDTO, tenantDomain);
+        Application application = buildResponse(consumerAppDTO, tenantDomain);
 
         String attributeFilterName = IdentityUtil.getProperty(OAuthConstants.ADDITIONAL_ATTRIBUTE_FILTER);
         if (StringUtils.isNotBlank(attributeFilterName)) {
@@ -123,7 +122,7 @@ public class DCRMService {
                 throw new DCRMClientException(OAuth2ErrorCodes.SERVER_ERROR,
                         DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
             }
-            List<String> responseAttributes = attributeHandler.getResponseAttKeys();
+            List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
             Map<String, String> storedAttributes = Arrays.stream(serviceProvider.getSpProperties())
                     .filter(entry -> responseAttributes.contains(entry.getName()))
                     .collect(HashMap::new, (map, entry) -> map.put(entry.getName(),
@@ -410,7 +409,7 @@ public class DCRMService {
         application.setSoftwareStatement(updateRequest.getSoftwareStatement());
 
         if (processedAttributes != null) {
-            List<String> responseAttributes = attributeHandler.getResponseAttKeys();
+            List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
             application.setAdditionalAttributes(processedAttributes.entrySet().stream()
                     .filter(entry -> responseAttributes.contains(entry.getKey()))
                     .collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll));
@@ -596,7 +595,7 @@ public class DCRMService {
         Application application = buildResponse(createdApp, tenantDomain);
         application.setSoftwareStatement(registrationRequest.getSoftwareStatement());
         if (processedAttributes != null) {
-            List<String> responseAttributes = attributeHandler.getResponseAttKeys();
+            List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
             application.setAdditionalAttributes(processedAttributes.entrySet().stream()
                     .filter(entry -> responseAttributes.contains(entry.getKey()))
                     .collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll));
@@ -813,6 +812,7 @@ public class DCRMService {
 
     private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain, String spName,
                                                   String templateName, boolean isManagementApp) throws DCRMException {
+
         return createServiceProvider(applicationOwner, tenantDomain, spName, templateName,
                 isManagementApp, null);
     }

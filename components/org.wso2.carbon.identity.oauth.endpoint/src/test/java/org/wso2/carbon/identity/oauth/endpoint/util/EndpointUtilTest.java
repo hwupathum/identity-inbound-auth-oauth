@@ -354,6 +354,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         }
 
         EndpointUtil.setOAuthAdminService(mockedOAuthAdminService);
+        when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
         when(mockedOAuthAdminService.getRegisteredOIDCScope(anyString()))
                 .thenReturn(Arrays.asList("openid", "email", "profile", "groups"));
         JDBCPermissionBasedInternalScopeValidator scopeValidatorSpy = PowerMockito.spy(

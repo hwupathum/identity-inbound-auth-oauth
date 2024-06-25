@@ -77,5 +77,4 @@ public interface AdditionalAttributeFilter {
      */
     List<String> getResponseAttributeKeys();
 
-
 }

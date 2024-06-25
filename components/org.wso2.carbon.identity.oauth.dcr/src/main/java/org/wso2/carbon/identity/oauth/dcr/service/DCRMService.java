@@ -119,7 +119,7 @@ public class DCRMService {
             } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
                      IllegalAccessException | InvocationTargetException e) {
                 log.error("Configured DCR additional attribute handler cannot be loaded");
-                throw new DCRMClientException(OAuth2ErrorCodes.SERVER_ERROR,
+                throw new DCRMServerException(OAuth2ErrorCodes.SERVER_ERROR,
                         DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
             }
             List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
@@ -279,7 +279,7 @@ public class DCRMService {
                 } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
                          IllegalAccessException | InvocationTargetException e) {
                     log.error("Configured DCR additional attribute handler cannot be loaded");
-                    throw new DCRMClientException(OAuth2ErrorCodes.SERVER_ERROR,
+                    throw new DCRMServerException(OAuth2ErrorCodes.SERVER_ERROR,
                             DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
                 }
                 if (ssaClaims != null || !updateRequest.getAdditionalAttributes().isEmpty()) {
@@ -549,7 +549,7 @@ public class DCRMService {
             } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
                      InvocationTargetException e) {
                 log.error("Configured DCR additional attribute handler cannot be loaded");
-                throw new DCRMClientException(OAuth2ErrorCodes.SERVER_ERROR,
+                throw new DCRMServerException(OAuth2ErrorCodes.SERVER_ERROR,
                                         DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
             }
             if (ssaClaims != null || !registrationRequest.getAdditionalAttributes().isEmpty()) {
@@ -833,7 +833,6 @@ public class DCRMService {
         Map<String, Object> spProperties = new HashMap<>();
         if (additionalProperties != null) {
             spProperties.putAll(additionalProperties);
-
         }
         spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
         addSPProperties(spProperties, sp, false);

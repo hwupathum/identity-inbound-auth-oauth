@@ -1168,7 +1168,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         ServiceProvider serviceProvider = new ServiceProvider();
         Map<String, Object> spProperties = new HashMap<>();
         spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
-        invokeMethod(dcrmService, "addSPProperties", spProperties, serviceProvider);
+        invokeMethod(dcrmService, "addSPProperties", spProperties, serviceProvider, false);
         ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
         boolean propertyExists = Arrays.stream(serviceProviderProperties)
                 .anyMatch(property -> property.getName().equals(OAuthConstants.IS_THIRD_PARTY_APP));

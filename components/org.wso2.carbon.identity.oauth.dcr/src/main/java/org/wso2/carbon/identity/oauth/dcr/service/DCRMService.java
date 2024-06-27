@@ -1182,7 +1182,7 @@ public class DCRMService {
      * @param serviceProvider ServiceProvider object.
      * @param update Boolean indicating whether to update property values if the key already exists
      */
-    private void addSPProperties(Map<String, Object> spProperties, ServiceProvider serviceProvider, boolean update) {
+    private void addSPProperties(Map<String, Object> spProperties, ServiceProvider serviceProvider, Boolean update) {
 
         ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
         for (Map.Entry<String, Object> entry : spProperties.entrySet()) {

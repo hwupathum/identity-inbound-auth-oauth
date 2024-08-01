@@ -4637,8 +4637,7 @@ public class OAuth2AuthzEndpoint {
         if (clientAttestationContextObj instanceof ClientAttestationContext) {
             clientAttestationContext = (ClientAttestationContext) clientAttestationContextObj;
         } else {
-            clientAttestationContext = new ClientAttestationContext();
-            clientAttestationContext.setAttestationEnabled(false);
+            clientAttestationContext = new ClientAttestationContext(false);
             clientAttestationContext.setAttested(false);
         }
         return clientAttestationContext;

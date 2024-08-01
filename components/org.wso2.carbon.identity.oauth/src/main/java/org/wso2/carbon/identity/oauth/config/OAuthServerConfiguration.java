@@ -420,6 +420,9 @@ public class OAuthServerConfiguration {
         // read OAuth URLs
         parseOAuthURLs(oauthElem);
 
+        // Read v2 OAuth URLS
+        parseV2OAuthURLs(oauthElem);
+
         // read token renewal per request config.
         // if enabled access token and refresh token will be renewed for each token endpoint call.
         parseTokenRenewalPerRequestConfiguration(oauthElem);
@@ -2296,106 +2299,116 @@ public class OAuthServerConfiguration {
                 deviceAuthzEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(
-                getQNameWithIdentityNS(ConfigElements.OAUTH1_REQUEST_TOKEN_URL_V2));
+    }
+
+    private void parseV2OAuthURLs(OMElement oauthConfigElem) {
+
+        OMElement oauthConfigElemV2 = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.V2));
+
+        if (oauthConfigElemV2 == null) {
+            return;
+        }
+
+        OMElement elem = oauthConfigElemV2.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.OAUTH1_REQUEST_TOKEN_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth1RequestTokenUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH1_AUTHORIZE_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH1_AUTHORIZE_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth1AuthorizeUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH1_ACCESS_TOKEN_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH1_ACCESS_TOKEN_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth1AccessTokenUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_AUTHZ_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_AUTHZ_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2AuthzEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_PAR_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_PAR_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2ParEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2TokenEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_USERINFO_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_USERINFO_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2UserInfoEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(
-                getQNameWithIdentityNS(ConfigElements.OAUTH2_REVOCATION_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.OAUTH2_REVOCATION_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2RevocationEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(
-                getQNameWithIdentityNS(ConfigElements.OAUTH2_INTROSPECTION_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.OAUTH2_INTROSPECTION_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2IntrospectionEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_CONSENT_PAGE_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_CONSENT_PAGE_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2ConsentPageUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_DCR_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_DCR_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2DCREPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_JWKS_PAGE_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_JWKS_PAGE_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2JWKSPageUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OIDC_DISCOVERY_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OIDC_DISCOVERY_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oidcDiscoveryUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OIDC_WEB_FINGER_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OIDC_WEB_FINGER_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oidcWebFingerEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OIDC_CONSENT_PAGE_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OIDC_CONSENT_PAGE_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oidcConsentPageUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_ERROR_PAGE_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_ERROR_PAGE_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2ErrorPageUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
-        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_AUTHZ_EP_URL_V2));
+        elem = oauthConfigElemV2.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_AUTHZ_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 deviceAuthzEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
@@ -3964,25 +3977,7 @@ public class OAuthServerConfiguration {
         public static final String OAUTH2_ERROR_PAGE_URL = "OAuth2ErrorPage";
         public static final String OIDC_CONSENT_PAGE_URL = "OIDCConsentPage";
         public static final String DEVICE_AUTHZ_EP_URL = "OAuth2DeviceAuthzEPUrl";
-
-        // Oauth endpoint V2 configs
-        public static final String OAUTH1_REQUEST_TOKEN_URL_V2 = "V2.OAuth1RequestTokenUrl";
-        public static final String OAUTH1_AUTHORIZE_URL_V2 = "V2.OAuth1AuthorizeUrl";
-        public static final String OAUTH1_ACCESS_TOKEN_URL_V2 = "V2.OAuth1AccessTokenUrl";
-        public static final String OAUTH2_AUTHZ_EP_URL_V2 = "V2.OAuth2AuthzEPUrl";
-        public static final String OAUTH2_PAR_EP_URL_V2 = "V2.OAuth2ParEPUrl";
-        public static final String OAUTH2_TOKEN_EP_URL_V2 = "V2.OAuth2TokenEPUrl";
-        public static final String OAUTH2_USERINFO_EP_URL_V2 = "V2.OAuth2UserInfoEPUrl";
-        public static final String OAUTH2_REVOCATION_EP_URL_V2 = "V2.OAuth2RevokeEPUrl";
-        public static final String OAUTH2_INTROSPECTION_EP_URL_V2 = "V2.OAuth2IntrospectEPUrl";
-        public static final String OAUTH2_CONSENT_PAGE_URL_V2 = "V2.OAuth2ConsentPage";
-        public static final String OAUTH2_DCR_EP_URL_V2 = "V2.OAuth2DCREPUrl";
-        public static final String OAUTH2_JWKS_PAGE_URL_V2 = "V2.OAuth2JWKSPage";
-        public static final String OIDC_WEB_FINGER_EP_URL_V2 = "V2.OIDCWebFingerEPUrl";
-        public static final String OIDC_DISCOVERY_EP_URL_V2 = "V2.OIDCDiscoveryEPUrl";
-        public static final String OAUTH2_ERROR_PAGE_URL_V2 = "V2.OAuth2ErrorPage";
-        public static final String OIDC_CONSENT_PAGE_URL_V2 = "V2.OIDCConsentPage";
-        public static final String DEVICE_AUTHZ_EP_URL_V2 = "V2.OAuth2DeviceAuthzEPUrl";
+        public static final String V2 = "V2";
 
         // JWT Generator
         public static final String AUTHORIZATION_CONTEXT_TOKEN_GENERATION = "AuthorizationContextTokenGeneration";

@@ -136,26 +136,38 @@ public class OIDCSessionManagementConfiguration {
             }
         }
 
-        element = oauthConfigElement.getFirstChildWithName(
-                getQNameWithIdentityNS(OIDCSessionConstants.OIDCConfigElements.OIDC_LOGOUT_CONSENT_PAGE_URL_V2));
+        element = oauthConfigElement.getFirstChildWithName(getQNameWithIdentityNS(
+                OIDCSessionConstants.OIDCConfigElements.HANDLE_ALREADY_LOGGED_OUT_SESSIONS_GRACEFULLY));
+        if (element != null) {
+            handleAlreadyLoggedOutSessionsGracefully = Boolean.parseBoolean(element.getText());
+        }
+
+        buildConfigurationsV2(oauthConfigElement);
+    }
+
+    private void buildConfigurationsV2(OMElement oauthConfigElement) {
+
+        OMElement oauthConfigElementV2 = oauthConfigElement.getFirstChildWithName(getQNameWithIdentityNS(
+                OIDCSessionConstants.OIDCConfigElements.V2));
+
+        if (oauthConfigElementV2 == null) {
+            return;
+        }
+
+        OMElement element = oauthConfigElementV2.getFirstChildWithName(
+                getQNameWithIdentityNS(OIDCSessionConstants.OIDCConfigElements.OIDC_LOGOUT_CONSENT_PAGE_URL));
         if (element != null) {
             if (StringUtils.isNotBlank(element.getText())) {
                 oidcLogoutConsentPageUrlV2 = IdentityUtil.fillURLPlaceholders(element.getText());
             }
         }
 
-        element = oauthConfigElement.getFirstChildWithName(
-                getQNameWithIdentityNS(OIDCSessionConstants.OIDCConfigElements.OIDC_LOGOUT_PAGE_URL_V2));
+        element = oauthConfigElementV2.getFirstChildWithName(
+                getQNameWithIdentityNS(OIDCSessionConstants.OIDCConfigElements.OIDC_LOGOUT_PAGE_URL));
         if (element != null) {
             if (StringUtils.isNotBlank(element.getText())) {
                 oidcLogoutPageUrlV2 = IdentityUtil.fillURLPlaceholders(element.getText());
             }
-        }
-
-        element = oauthConfigElement.getFirstChildWithName(getQNameWithIdentityNS(
-                OIDCSessionConstants.OIDCConfigElements.HANDLE_ALREADY_LOGGED_OUT_SESSIONS_GRACEFULLY));
-        if (element != null) {
-            handleAlreadyLoggedOutSessionsGracefully = Boolean.parseBoolean(element.getText());
         }
     }
 

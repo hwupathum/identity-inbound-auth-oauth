@@ -106,13 +106,15 @@ public class SubjectTokenResponseTypeHandlerTest extends PowerMockTestCase {
     @DataProvider(name = "IssueSubjectTokenDataProvider")
     public Object[][] issueSubjectTokenDataProvider() {
         return new Object[][]{
-                {"subject_token"},
-                {"id_token subject_token"},
+                {"subject_token" , "scope_1 openid"},
+                {"subject_token" , "scope_1"},
+                {"id_token subject_token", "scope_1 openid"},
+                {"id_token subject_token", "scope_1"}
         };
     }
 
     @Test(dataProvider = "IssueSubjectTokenDataProvider")
-    public void issueSubjectTokenTest(String responseType) throws Exception {
+    public void issueSubjectTokenTest(String responseType, String scope) throws Exception {
 
         OAuthComponentServiceHolder.getInstance().setOauth2Service(oAuth2Service);
         mockStatic(ResponseTypeHandlerUtil.class);
@@ -141,7 +143,7 @@ public class SubjectTokenResponseTypeHandlerTest extends PowerMockTestCase {
         authorizationReqDTO.setResponseType(responseType);
         authorizationReqDTO.setUser(user);
         authAuthzReqMessageContext = new OAuthAuthzReqMessageContext(authorizationReqDTO);
-        authAuthzReqMessageContext.setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
+        authAuthzReqMessageContext.setApprovedScope(scope.split(" "));
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setGrantTypes("code");

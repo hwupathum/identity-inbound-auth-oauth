@@ -23,9 +23,12 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -36,6 +39,8 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -54,7 +59,9 @@ import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.OAUT
         {
                 OAuth2ServiceComponentHolder.class,
                 OAuth2Util.class,
-                OAuthServerConfiguration.class
+                OAuthServerConfiguration.class,
+                OAuthComponentServiceHolder.class,
+                OAuthUtil.class
         }
 )
 public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
@@ -70,9 +77,12 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
     @Mock
     private ApplicationManagementService applicationManagementService;
     @Mock
-    private AuthenticatedUser endUser;
+    private OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
     @Mock
-    private OAuthServerConfiguration oAuthServerConfiguration;
+    private RealmService mockRealmService;
+    @Mock
+    private TenantManager mockTenantManager;
+
 
     private ImpersonationRequestDTO impersonationRequestDTO;
     private static final String[] SCOPES_WITHOUT_OPENID = new String[]{"scope1", "scope2"};
@@ -80,9 +90,13 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
     @BeforeMethod
     public void setUp() throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        mockStatic(OAuth2Util.class);
+        mockStatic(OAuthComponentServiceHolder.class);
+        when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
+        mockStatic(OAuthUtil.class);
+        when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getTenantManager()).thenReturn(mockTenantManager);
+        when(mockTenantManager.getTenantId("carbon.super")).thenReturn(-1234);
+
         mockStatic(OAuth2ServiceComponentHolder.class);
         mockStatic(OAuth2Util.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
@@ -98,10 +112,17 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
         when(oAuthAuthzReqMessageContext.getRequestedScopes()).thenReturn(SCOPES_WITHOUT_OPENID);
         impersonationRequestDTO = new ImpersonationRequestDTO();
         impersonationRequestDTO.setoAuthAuthzReqMessageContext(oAuthAuthzReqMessageContext);
+        when(OAuthUtil.getUserFromTenant("dummySubjectId", -1234)).thenReturn(getDummyUser());
 
-        when(OAuth2Util.resolveUsernameFromUserId("carbon.super", "dummySubjectId"))
-                .thenReturn("dummyUserName");
-        when(OAuth2Util.getUserFromUserName("dummyUserName")).thenReturn(endUser);
+    }
+
+    private User getDummyUser() {
+
+        User user = new User();
+        user.setUserName("dummmyUserName");
+        user.setUserStoreDomain("dummyUserStore");
+        user.setTenantDomain("carbon.super");
+        return user;
     }
 
     @Test

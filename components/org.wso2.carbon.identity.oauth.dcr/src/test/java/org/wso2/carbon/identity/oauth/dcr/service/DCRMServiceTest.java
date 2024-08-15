@@ -313,8 +313,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
         when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
                 .thenReturn(serviceProvider);
-        when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
-                .thenReturn(new ServiceProvider());
         Application application = dcrmService.getApplication(dummyConsumerKey);
 
         assertEquals(application.getClientId(), dummyConsumerKey);

@@ -546,11 +546,9 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         Map<String, Object> oidcClaims = new HashMap<>();
         try {
             oidcClaims = getUserClaimsInOIDCDialect(spTenantDomain, claims);
-            // Merge claims into oidcClaims, prioritizing the claims map.
-            Map<String, Object> mergedClaims = new HashMap<>(oidcClaims);
+            // Merge the initial claims into oidcClaims, while prioritizing the initial claims map.
             for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
-                // Put the claim into the merged map, overwriting if it already exists.
-                mergedClaims.put(claimEntry.getKey(), claimEntry.getValue());
+                oidcClaims.put(claimEntry.getKey(), claimEntry.getValue());
             }
             return mergedClaims;
         } catch (ClaimMetadataException e) {

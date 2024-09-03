@@ -170,7 +170,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(requestMsgCtx);
         } else {
             // Get claim map from the cached attributes
-            userClaimsInOIDCDialect = getOIDCClaimFromUserAttributes(userAttributes, requestMsgCtx);
+            userClaimsInOIDCDialect = getOIDCClaimsFromUserAttributes(userAttributes, requestMsgCtx);
         }
 
         Object hasNonOIDCClaimsProperty = requestMsgCtx.getProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS);
@@ -532,7 +532,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      * @param requestMsgCtx     Request Context.
      * @return User attributes Map.
      */
-    private Map<String, Object> getOIDCClaimFromUserAttributes(Map<ClaimMapping, String> userAttributes,
+    private Map<String, Object> getOIDCClaimsFromUserAttributes(Map<ClaimMapping, String> userAttributes,
                                                                OAuthTokenReqMessageContext requestMsgCtx)
             throws IdentityOAuth2Exception {
 

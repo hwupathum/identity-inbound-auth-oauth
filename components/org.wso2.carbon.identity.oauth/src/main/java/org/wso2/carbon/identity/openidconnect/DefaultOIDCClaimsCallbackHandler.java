@@ -549,7 +549,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
                 oidcClaims.put(claimEntry.getKey(), claimEntry.getValue());
             }
-            return mergedClaims;
+            return oidcClaims;
         } catch (ClaimMetadataException e) {
             throw new IdentityOAuth2Exception("Error occurred while mapping claims for user: " +
                     requestMsgCtx.getAuthorizedUser() + " from userstore.", e);

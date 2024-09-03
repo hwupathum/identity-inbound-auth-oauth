@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -169,7 +170,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(requestMsgCtx);
         } else {
             // Get claim map from the cached attributes
-            userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
+            userClaimsInOIDCDialect = getOIDCClaimFromUserAttributes(userAttributes, requestMsgCtx);
         }
 
         Object hasNonOIDCClaimsProperty = requestMsgCtx.getProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS);
@@ -522,6 +523,40 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
         }
         return claims;
+    }
+
+    /**
+     * Get oidc claims mapping.
+     *
+     * @param userAttributes    User attributes.
+     * @param requestMsgCtx     Request Context.
+     * @return User attributes Map.
+     */
+    private Map<String, Object> getOIDCClaimFromUserAttributes(Map<ClaimMapping, String> userAttributes,
+                                                               OAuthTokenReqMessageContext requestMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String spTenantDomain = getServiceProviderTenantDomain(requestMsgCtx);
+        Map<String, String> claims = new HashMap<>();
+        if (isNotEmpty(userAttributes)) {
+            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
+                claims.put(entry.getKey().getRemoteClaim().getClaimUri(), entry.getValue().toString());
+            }
+        }
+        Map<String, Object> oidcClaims = new HashMap<>();
+        try {
+            oidcClaims = getUserClaimsInOIDCDialect(spTenantDomain, claims);
+            // Merge claims into oidcClaims, prioritizing the claims map.
+            Map<String, Object> mergedClaims = new HashMap<>(oidcClaims);
+            for (Map.Entry<String, String> claimEntry : claims.entrySet()) {
+                // Put the claim into the merged map, overwriting if it already exists.
+                mergedClaims.put(claimEntry.getKey(), claimEntry.getValue());
+            }
+            return mergedClaims;
+        } catch (ClaimMetadataException e) {
+            throw new IdentityOAuth2Exception("Error occurred while mapping claims for user: " +
+                    requestMsgCtx.getAuthorizedUser() + " from userstore.", e);
+        }
     }
 
     private Map<String, Object> getUserClaimsInOIDCDialect(String spTenantDomain,

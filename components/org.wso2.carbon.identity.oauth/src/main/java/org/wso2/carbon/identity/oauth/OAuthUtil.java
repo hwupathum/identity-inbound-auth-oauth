@@ -825,18 +825,18 @@ public final class OAuthUtil {
         return clientIds;
     }
 
-    private static Set<String> getClientIdsWithOrganizationAudience(List<String> clientIds, String tenantDomain) {
+    private static Set<String> filterClientIdsWithOrganizationAudience(List<String> clientIds, String tenantDomain) {
 
         Set<String> clientIdsWithOrganizationAudience = new HashSet<>();
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
         for (String clientId : clientIds) {
             try {
-                ServiceProvider serviceProvider = applicationManagementService.getServiceProviderByClientId(clientId,
+                String applicationId = applicationManagementService.getApplicationResourceIDByInboundKey(clientId,
                         OAUTH2, tenantDomain);
-                String audience = applicationManagementService.getAllowedAudienceForRoleAssociation(
-                        serviceProvider.getApplicationResourceId(), tenantDomain);
-                if (StringUtils.isNotBlank(audience) && RoleConstants.ORGANIZATION.equalsIgnoreCase(audience)) {
+                String audience = applicationManagementService.getAllowedAudienceForRoleAssociation(applicationId,
+                        tenantDomain);
+                if (RoleConstants.ORGANIZATION.equalsIgnoreCase(audience)) {
                     clientIdsWithOrganizationAudience.add(clientId);
                 }
             } catch (IdentityApplicationManagementException e) {
@@ -1020,7 +1020,7 @@ public final class OAuthUtil {
                             .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
 
                 if (role != null && RoleConstants.ORGANIZATION.equals(role.getAudience())) {
-                    clientIds = getClientIdsWithOrganizationAudience(new ArrayList<>(clientIds), tenantDomain);
+                    clientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds), tenantDomain);
                 }
 
             } catch (IdentityOAuth2Exception e) {

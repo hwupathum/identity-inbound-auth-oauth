@@ -88,6 +88,7 @@ import javax.crypto.spec.SecretKeySpec;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OAUTH2;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX;
@@ -824,6 +825,27 @@ public final class OAuthUtil {
         return clientIds;
     }
 
+    private static Set<String> filterClientIdsWithOrganizationAudience(List<String> clientIds, String tenantDomain) {
+
+        Set<String> clientIdsWithOrganizationAudience = new HashSet<>();
+        ApplicationManagementService applicationManagementService =
+                OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
+        for (String clientId : clientIds) {
+            try {
+                String applicationId = applicationManagementService.getApplicationResourceIDByInboundKey(clientId,
+                        OAUTH2, tenantDomain);
+                String audience = applicationManagementService.getAllowedAudienceForRoleAssociation(applicationId,
+                        tenantDomain);
+                if (RoleConstants.ORGANIZATION.equalsIgnoreCase(audience)) {
+                    clientIdsWithOrganizationAudience.add(clientId);
+                }
+            } catch (IdentityApplicationManagementException e) {
+                LOG.error("Error occurred while retrieving application information for client id: " + clientId, e);
+            }
+        }
+        return clientIdsWithOrganizationAudience;
+    }
+
     /**
      * This method will retrieve the role details of the given role id.
      * @param roleId        Role Id.
@@ -974,7 +996,7 @@ public final class OAuthUtil {
 
         // Get details about the role to identify the audience and associated applications.
         Set<String> clientIds = null;
-        Role role;
+        Role role = null;
         boolean getClientIdsFromUser = false;
         if (roleId != null) {
             role = getRole(roleId, IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
@@ -984,6 +1006,7 @@ public final class OAuthUtil {
             } else {
                 // Get all the distinct client Ids authorized by this user since this is an organization role.
                 getClientIdsFromUser = true;
+
             }
         } else {
             // Get all the distinct client Ids authorized by this user since no role is specified.
@@ -994,7 +1017,12 @@ public final class OAuthUtil {
             // Get all the distinct client Ids authorized by this user
             try {
                 clientIds = OAuthTokenPersistenceFactory.getInstance()
-                        .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
+                            .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
+
+                if (role != null && RoleConstants.ORGANIZATION.equals(role.getAudience())) {
+                    clientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds), tenantDomain);
+                }
+
             } catch (IdentityOAuth2Exception e) {
                 LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
                 throw new UserStoreException(e);

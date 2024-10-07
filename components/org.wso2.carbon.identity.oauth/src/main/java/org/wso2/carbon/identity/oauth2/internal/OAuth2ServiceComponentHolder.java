@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServe
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
@@ -103,6 +104,7 @@ public class OAuth2ServiceComponentHolder {
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
+    private static AccountLockService accountLockService;
     private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
     private static boolean restrictUnassignedScopes;
     private static ConfigurationContextService configurationContextService;
@@ -884,5 +886,25 @@ public class OAuth2ServiceComponentHolder {
     public void setConfigurationManager(ConfigurationManager configurationManager) {
 
         this.configurationManager = configurationManager;
+    }
+
+    /**
+     * Set the account lock service to the OAuth2ServiceComponentHolder.
+     *
+     * @param accountLockService Account lock service instance.
+     */
+    public static void setAccountLockService(AccountLockService accountLockService) {
+
+        OAuth2ServiceComponentHolder.accountLockService = accountLockService;
+    }
+
+    /**
+     * Retrieve the account lock service.
+     *
+     * @return Account lock service instance.
+     */
+    public static AccountLockService getAccountLockService() {
+
+        return OAuth2ServiceComponentHolder.accountLockService;
     }
 }

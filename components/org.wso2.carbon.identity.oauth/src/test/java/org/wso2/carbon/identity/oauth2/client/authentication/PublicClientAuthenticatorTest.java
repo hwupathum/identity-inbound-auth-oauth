@@ -26,6 +26,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -45,6 +46,7 @@ import javax.servlet.http.HttpServletRequest;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 /**
  * This class contains the test cased related to the public client authentication functionality.
@@ -111,7 +113,9 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setBypassClientCredentials(publicClient);
 
-        PowerMockito.when(OAuth2Util.getAppInformationByClientId(CLIENT_ID)).thenReturn(appDO);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+        PowerMockito.when(OAuth2Util.getAppInformationByClientId(CLIENT_ID, SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(appDO);
 
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
         PowerMockito.when(httpServletRequest.getHeader(headerName)).thenReturn(headerValue);

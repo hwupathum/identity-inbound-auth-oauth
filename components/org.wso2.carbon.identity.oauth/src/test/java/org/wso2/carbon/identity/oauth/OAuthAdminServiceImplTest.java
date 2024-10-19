@@ -94,6 +94,7 @@ import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.powermock.reflect.Whitebox.invokeMethod;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
 
 @PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
 @PrepareForTest({OAuthAdminServiceImpl.class, IdentityCoreServiceComponent.class, ConfigurationContextService.class,
@@ -384,10 +385,11 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     public void testGetOAuthApplicationDataByAppName() throws Exception {
 
         String appName = "some-app-name";
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
 
         // Create oauth application data.
         OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
-        when(oAuthAppDAO.getAppInformationByAppName(appName)).thenReturn(app);
+        when(oAuthAppDAO.getAppInformationByAppName(appName, SUPER_TENANT_ID)).thenReturn(app);
         whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
 
         OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
@@ -400,13 +402,16 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     public void testGetOAuthApplicationDataByAppNameException(String exception) throws Exception {
 
         String appName = "some-app-name";
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
 
         switch (exception) {
             case "InvalidOAuthClientException":
-                when(oAuthAppDAO.getAppInformationByAppName(appName)).thenThrow(InvalidOAuthClientException.class);
+                when(oAuthAppDAO.getAppInformationByAppName(appName, SUPER_TENANT_ID))
+                        .thenThrow(InvalidOAuthClientException.class);
                 break;
             case "IdentityOAuth2Exception":
-                when(oAuthAppDAO.getAppInformationByAppName(appName)).thenThrow(IdentityOAuth2Exception.class);
+                when(oAuthAppDAO.getAppInformationByAppName(appName, SUPER_TENANT_ID))
+                        .thenThrow(IdentityOAuth2Exception.class);
         }
         whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
 

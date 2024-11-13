@@ -282,7 +282,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2TokenUtil.class);
         doNothing().when(OAuth2TokenUtil.class, "postRevokeCode", anyString(), anyString(), anyString());
         authorizationCodeDAO.updateAuthorizationCodeState(authzCodeDO1.getAuthorizationCode(),
-                OAuthConstants.AuthorizationCodeState.REVOKED);
+                authzCodeDO1.getAuthzCodeId(), OAuthConstants.AuthorizationCodeState.REVOKED);
         Set<String> availableAuthzCodes = new HashSet<>();
         availableAuthzCodes.add(authzCode2);
 

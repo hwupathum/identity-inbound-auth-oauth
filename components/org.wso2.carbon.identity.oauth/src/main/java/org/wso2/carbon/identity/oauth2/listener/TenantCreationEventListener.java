@@ -18,13 +18,16 @@
 
 package org.wso2.carbon.identity.oauth2.listener;
 
+import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.stratos.common.beans.TenantInfoBean;
 import org.wso2.carbon.stratos.common.exception.StratosException;
@@ -34,6 +37,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
  * This is an implementation of TenantMgtListener. This uses
@@ -127,6 +132,14 @@ public class TenantCreationEventListener implements TenantMgtListener {
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
                 OAuthUtil.clearOAuthCache(accessTokenDO);
+                TokenBinding tokenBinding = accessTokenDO.getTokenBinding();
+                String tokenBindingReference = (tokenBinding != null &&
+                        StringUtils.isNotBlank(tokenBinding.getBindingReference())) ?
+                        tokenBinding.getBindingReference() : NONE;
+                String authorizedOrgId = StringUtils.isNotEmpty(accessTokenDO.getAuthorizedOrganizationId()) ?
+                        accessTokenDO.getAuthorizedOrganizationId() : OAuthConstants.AuthorizedOrganization.NONE;
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference, authorizedOrgId);
             }
 
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessTokens(

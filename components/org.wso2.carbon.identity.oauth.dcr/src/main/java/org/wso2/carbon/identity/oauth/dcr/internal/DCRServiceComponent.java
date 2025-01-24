@@ -29,8 +29,6 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Htt
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityProcessor;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpUnregistrationResponseFactory;
@@ -83,17 +81,6 @@ public class DCRServiceComponent {
                     new UnRegistrationHandler(), null);
             componentContext.getBundleContext().registerService(DCRMService.class.getName(),
                     new DCRMService(), null);
-
-            String attributeFilterName = IdentityUtil.getProperty(OAuthConstants.ADDITIONAL_ATTRIBUTE_FILTER);
-            if (attributeFilterName != null) {
-                Class<?> clazz = Thread.currentThread().getContextClassLoader()
-                        .loadClass(attributeFilterName);
-                Object attributeFilter = clazz.newInstance();
-                if (attributeFilter instanceof AdditionalAttributeFilter) {
-                    DCRDataHolder.getInstance()
-                            .setAdditionalAttributeFilter((AdditionalAttributeFilter) attributeFilter);
-                }
-            }
         } catch (Throwable e) {
             log.error("Error occurred while activating DCRServiceComponent", e);
         }
@@ -232,5 +219,20 @@ public class DCRServiceComponent {
         if (tokenBinderInfo instanceof TokenBinder) {
             DCRDataHolder.getInstance().removeTokenBinder((TokenBinder) tokenBinderInfo);
         }
+    }
+
+    @Reference(name = "identity.oauth.dcr.attribute.filter",
+            service = AdditionalAttributeFilter.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAdditionalAttributeFilter")
+    protected void setAdditionalAttributeFilter(AdditionalAttributeFilter additionalAttributeFilter) {
+
+        DCRDataHolder.getInstance().setAdditionalAttributeFilter(additionalAttributeFilter);
+    }
+
+    protected void unsetAdditionalAttributeFilter(AdditionalAttributeFilter tokenBinderInfo) {
+
+        DCRDataHolder.getInstance().setAdditionalAttributeFilter(null);
     }
 }

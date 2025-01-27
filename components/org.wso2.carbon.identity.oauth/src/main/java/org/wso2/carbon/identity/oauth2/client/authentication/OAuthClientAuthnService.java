@@ -48,6 +48,7 @@ public class OAuthClientAuthnService {
     private static final Log log = LogFactory.getLog(OAuthClientAuthnService.class);
     private static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedClientAuthenticationMethods.AllowedClientAuthenticationMethod";
+    private static final String REMOVE_CLIENT_ID_FROM_ERROR_MESSAGE = "OAuth.RemoveClientIdFromErrorMsg";
 
     /**
      * Retrieve OAuth2 client authenticators which are reigstered dynamically.
@@ -189,7 +190,12 @@ public class OAuthClientAuthnService {
                 if (log.isDebugEnabled()) {
                     log.debug(errorMessage, e);
                 }
-                setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, errorMessage, oAuthClientAuthnContext);
+                if (Boolean.parseBoolean(IdentityUtil.getProperty(REMOVE_CLIENT_ID_FROM_ERROR_MESSAGE))) {
+                    setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, "Client credentials are invalid.",
+                            oAuthClientAuthnContext);
+                } else {
+                    setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, errorMessage, oAuthClientAuthnContext);
+                }
             } catch (IdentityOAuth2Exception e) {
                 throw new OAuthClientAuthnException("Error while obtaining the service provider for client_id: " +
                         clientId, OAuth2ErrorCodes.SERVER_ERROR);

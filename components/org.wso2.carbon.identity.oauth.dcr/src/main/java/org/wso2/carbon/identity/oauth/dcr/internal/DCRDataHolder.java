@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.dcr.internal;
 
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.oauth.dcr.handler.AdditionalAttributeFilter;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
@@ -40,6 +41,7 @@ public class DCRDataHolder {
     private List<RegistrationHandler> registrationHandlerList = new ArrayList<>();
     private List<UnRegistrationHandler> unRegistrationHandlerList = new ArrayList<>();
     private List<TokenBinder> tokenBinders = new ArrayList<>();
+    private AdditionalAttributeFilter additionalAttributeFilter = null;
 
     private DCRDataHolder() {
 
@@ -98,5 +100,15 @@ public class DCRDataHolder {
     public void removeTokenBinder(TokenBinder tokenBinder) {
 
         this.tokenBinders.remove(tokenBinder);
+    }
+
+    public AdditionalAttributeFilter getAdditionalAttributeFilter() {
+
+        return additionalAttributeFilter;
+    }
+
+    public void setAdditionalAttributeFilter(AdditionalAttributeFilter additionalAttributeFilter) {
+
+        this.additionalAttributeFilter = additionalAttributeFilter;
     }
 }

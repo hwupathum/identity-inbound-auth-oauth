@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -62,7 +61,6 @@ import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -114,18 +112,8 @@ public class DCRMService {
         Application application = buildResponse(consumerAppDTO, tenantDomain);
         application.setExtAllowedAudience(serviceProvider.getAssociatedRolesConfig().getAllowedAudience());
 
-        String attributeFilterName = IdentityUtil.getProperty(OAuthConstants.ADDITIONAL_ATTRIBUTE_FILTER);
-        if (StringUtils.isNotBlank(attributeFilterName)) {
-            AdditionalAttributeFilter attributeHandler;
-            try {
-                attributeHandler = (AdditionalAttributeFilter)
-                        Class.forName(attributeFilterName).getDeclaredConstructor().newInstance();
-            } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
-                     IllegalAccessException | InvocationTargetException e) {
-                log.error("Configured DCR additional attribute handler cannot be loaded");
-                throw new DCRMServerException(OAuth2ErrorCodes.SERVER_ERROR,
-                        DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
-            }
+        AdditionalAttributeFilter attributeHandler = DCRDataHolder.getInstance().getAdditionalAttributeFilter();
+        if (attributeHandler != null) {
             List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
             Map<String, String> storedAttributes = Arrays.stream(serviceProvider.getSpProperties())
                     .filter(entry -> responseAttributes.contains(entry.getName()))
@@ -278,17 +266,8 @@ public class DCRMService {
             }
 
             //Validating and filtering additional attributes via extension
-            String attributeFilterName = IdentityUtil.getProperty(OAuthConstants.ADDITIONAL_ATTRIBUTE_FILTER);
-            if (StringUtils.isNotBlank(attributeFilterName)) {
-                try {
-                    attributeHandler = (AdditionalAttributeFilter)
-                            Class.forName(attributeFilterName).getDeclaredConstructor().newInstance();
-                } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
-                         IllegalAccessException | InvocationTargetException e) {
-                    log.error("Configured DCR additional attribute handler cannot be loaded");
-                    throw new DCRMServerException(OAuth2ErrorCodes.SERVER_ERROR,
-                            DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
-                }
+            attributeHandler = DCRDataHolder.getInstance().getAdditionalAttributeFilter();
+            if (attributeHandler != null) {
                 if (ssaClaims != null || !updateRequest.getAdditionalAttributes().isEmpty()) {
                     processedAttributes = attributeHandler.filterDCRUpdateAttributes(updateRequest, ssaClaims,
                             sp.getSpProperties());
@@ -555,20 +534,11 @@ public class DCRMService {
 
         ServiceProvider serviceProvider;
         Map<String, Object> processedAttributes = null;
-        AdditionalAttributeFilter attributeHandler = null;
 
         //Validating and filtering additional attributes via extension
-        String attributeFilterName = IdentityUtil.getProperty(OAuthConstants.ADDITIONAL_ATTRIBUTE_FILTER);
-        if (StringUtils.isNotBlank(attributeFilterName)) {
-            try {
-                attributeHandler = (AdditionalAttributeFilter)
-                        Class.forName(attributeFilterName).getDeclaredConstructor().newInstance();
-            } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
-                     InvocationTargetException e) {
-                log.error("Configured DCR additional attribute handler cannot be loaded");
-                throw new DCRMServerException(OAuth2ErrorCodes.SERVER_ERROR,
-                                        DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
-            }
+        AdditionalAttributeFilter attributeHandler = DCRDataHolder.getInstance().getAdditionalAttributeFilter();
+        if (attributeHandler != null) {
+
             if (ssaClaims != null || !registrationRequest.getAdditionalAttributes().isEmpty()) {
                 processedAttributes = attributeHandler.filterDCRRegisterAttributes(registrationRequest, ssaClaims);
             }

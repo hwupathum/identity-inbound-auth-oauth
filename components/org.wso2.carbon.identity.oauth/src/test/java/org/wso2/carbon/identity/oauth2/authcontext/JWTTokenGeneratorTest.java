@@ -227,6 +227,7 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
         oAuthAppDO.setUser(user);
         oAuthAppDO.setApplicationName("testApp" + new Random(4));
         oAuthAppDO.setOauthVersion("2.0");
+        oAuthAppDO.setBackChannelLogoutUrl("http://i.have.nowhere.to.go");
 
         OAuthAppDAO authAppDAO = new OAuthAppDAO();
         authAppDAO.addOAuthConsumer("testUser", -1234, "PRIMARY");

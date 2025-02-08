@@ -110,6 +110,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         oAuthAppDO.setUser(authenticatedUser);
         oAuthAppDO.setCallbackUrl("http://i.have.nowhere.to.go");
         oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+        oAuthAppDO.setBackChannelLogoutUrl("http://i.have.nowhere.to.go");
 
         oAuthAppDAO.addOAuthApplication(oAuthAppDO);
 

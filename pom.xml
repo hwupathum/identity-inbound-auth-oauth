@@ -254,6 +254,11 @@
                 <version>${carbon.identity.organization.management.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.application</artifactId>
+                <version>${carbon.identity.organization.management.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.consent.server.configs.mgt</artifactId>
                 <version>${carbon.identity.framework.version}</version>
@@ -906,7 +911,7 @@
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
-        <carbon.identity.organization.management.version>1.4.7
+        <carbon.identity.organization.management.version>1.4.8.10
         </carbon.identity.organization.management.version>
         <carbon.identity.organization.management.version.range>[1.1.14, 2.0.0)
         </carbon.identity.organization.management.version.range>

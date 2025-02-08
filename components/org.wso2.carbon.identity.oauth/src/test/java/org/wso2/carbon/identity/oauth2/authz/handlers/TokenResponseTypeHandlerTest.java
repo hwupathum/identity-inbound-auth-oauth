@@ -98,6 +98,7 @@ public class TokenResponseTypeHandlerTest {
         oAuthAppDO.setOauthConsumerKey(clientId);
         oAuthAppDO.setUser(authenticatedUser);
         oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+        oAuthAppDO.setBackChannelLogoutUrl("http://i.have.nowhere.to.go");
 
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setAccessToken("abcdefghijklmn");

@@ -206,6 +206,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         oAuthAppDO.setApplicationName("testapp1");
         oAuthAppDO.setUser(authenticatedUser);
+        oAuthAppDO.setBackChannelLogoutUrl("http://i.have.nowhere.to.go");
         authenticatedUser.setUserName(userName);
         when(oAuthAppDAO.getOAuthConsumerAppsOfUser(userName, -1234)).thenReturn(new OAuthAppDO[]{oAuthAppDO});
         OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
@@ -252,6 +253,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
         oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
         oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
+        oAuthConsumerAppDTO.setBackChannelLogoutUrl("http://i.have.nowhere.to.go");
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         doNothing().when(oAuthAppDAO).addOAuthApplication(Matchers.any(OAuthAppDO.class));
@@ -583,6 +585,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setOauthConsumerKey(CONSUMER_KEY);
         oAuthAppDO.setOauthConsumerSecret(UPDATED_CONSUMER_SECRET);
+        oAuthAppDO.setBackChannelLogoutUrl("http://i.have.nowhere.to.go");
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName("test_user");

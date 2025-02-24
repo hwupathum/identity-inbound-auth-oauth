@@ -22,7 +22,6 @@ import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
-import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
@@ -41,7 +40,6 @@ public class OIDCSessionManagementComponentServiceHolder {
     private static List<OIDCLogoutHandler> oidcPostLogoutHandlers = new ArrayList<>();
     private static ApplicationManagementService applicationMgtService;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
-    private OrganizationManager organizationManager;
 
     private OIDCSessionManagementComponentServiceHolder() {
 
@@ -121,15 +119,5 @@ public class OIDCSessionManagementComponentServiceHolder {
     public void removeTokenBinder(TokenBinder tokenBinder) {
 
         this.tokenBinders.remove(tokenBinder);
-    }
-
-    public void setOrganizationManager(OrganizationManager organizationManager) {
-
-        this.organizationManager = organizationManager;
-    }
-
-    public OrganizationManager getOrganizationManager() {
-
-        return organizationManager;
     }
 }

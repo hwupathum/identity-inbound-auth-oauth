@@ -658,7 +658,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         setValidityPeriod(accessTokenDO, tokReqMsgCtx, oAuthAppDO);
     }
 
-
     private void handleRequestBinding(AccessTokenDO accessTokenDO, OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         if (accessTokenDO.getTokenBinding() != null) {

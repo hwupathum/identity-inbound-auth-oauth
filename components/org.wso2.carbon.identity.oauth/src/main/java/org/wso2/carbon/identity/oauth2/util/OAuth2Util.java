@@ -4033,6 +4033,7 @@ public class OAuth2Util {
      * @param tenantDomain    tenent domain
      * @param idpName         idp name
      * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     * @throws IdentityOAuth2Exception If the user ID is not found.
      */
     public static AuthenticatedUser createAuthenticatedUser(AuthenticatedUser authzUser, String userStoreDomain,
                                                             String tenantDomain, String idpName)
@@ -4054,7 +4055,6 @@ public class OAuth2Util {
             authenticatedUser.setUserResidentOrganization(authzUser.getUserResidentOrganization());
             // Update user tenant domain.
             authenticatedUser.setTenantDomain(authzUser.getTenantDomain());
-
         }
         return authenticatedUser;
     }

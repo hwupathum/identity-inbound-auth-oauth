@@ -1704,7 +1704,7 @@ public class OAuth2Util {
     public static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile,
                                          String oauth2EndpointURLV2InFile) {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             if (StringUtils.isNotBlank(oauth2EndpointURLV2InFile)) {
                 return oauth2EndpointURLV2InFile;
             }
@@ -4178,7 +4178,7 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
                 return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {

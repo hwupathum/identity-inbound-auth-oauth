@@ -40,6 +40,7 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
+import org.apache.xmlbeans.impl.common.IdentityConstraint;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
@@ -82,6 +83,7 @@ import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationCo
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.model.UserAgent;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -350,6 +352,9 @@ public class OAuth2AuthzEndpoint {
                 String tenantDomain = null;
                 if (StringUtils.isNotEmpty(oAuthMessage.getClientId())) {
                     tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+                    // Checks if the current application is a system app and sets the value to thread local
+                    IdentityUtil.threadLocalProperties.get().put(IdentityCoreConstants.IS_SYSTEM_APPLICATION,
+                            IdentityTenantUtil.isSystemApplication(tenantDomain, oAuthMessage.getClientId()));
                 } else if (oAuthMessage.getSessionDataCacheEntry() != null) {
                     OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
                     tenantDomain = oauth2Params.getTenantDomain();

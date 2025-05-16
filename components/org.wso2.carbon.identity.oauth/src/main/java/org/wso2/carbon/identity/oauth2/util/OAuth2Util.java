@@ -384,6 +384,7 @@ public class OAuth2Util {
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
+    private static final String BEARER_AUTHORIZATION_PREFIX = "Bearer ";
 
     private OAuth2Util() {
 
@@ -5198,6 +5199,30 @@ public class OAuth2Util {
         }
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
+    }
+
+    /**
+     * Get the bearer token from the oauth header.
+     *
+     * @param request Http servlet request.
+     * @return Bearer token.
+     * @throws OAuthClientAuthnException If an error occurs.
+     */
+    public static String extractBearerTokenFromAuthzHeader(HttpServletRequest request)
+            throws OAuthClientAuthnException {
+
+        String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        if (StringUtils.isEmpty(authorizationHeader)) {
+            authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION.toLowerCase());
+        }
+
+        if (StringUtils.isNotEmpty(authorizationHeader)  &&
+                authorizationHeader.toLowerCase().startsWith(BEARER_AUTHORIZATION_PREFIX.toLowerCase())) {
+            return OAuthUtils.getAuthHeaderField(authorizationHeader);
+        } else {
+            String errMsg = "Bearer authorization header is not available in the request.";
+            throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
+        }
     }
 
     /**

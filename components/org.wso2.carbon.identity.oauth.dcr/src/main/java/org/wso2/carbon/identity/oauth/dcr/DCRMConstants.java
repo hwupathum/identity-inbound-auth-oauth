@@ -57,7 +57,8 @@ public class DCRMConstants {
         FAILED_TO_VALIDATE_TENANT_DOMAIN("Error occurred during validating tenant domain for consumer key: %s"),
         SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement"),
         FAILED_TO_READ_SSA("Error occurred while reading the software statement"),
-        ADDITIONAL_ATTRIBUTE_ERROR("Error occurred while handling additional attributes");
+        ADDITIONAL_ATTRIBUTE_ERROR("Error occurred while handling additional attributes"),
+        MISSING_CLIENT_NAME("The client name is missing or empty.");
 
         private final String message;
         private final String errorCode;

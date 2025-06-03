@@ -34,7 +34,6 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
-import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -160,17 +159,22 @@ public class RegisterApiServiceImpl extends RegisterApiService {
     }
 
     private Response buildResponseWithOptionalNullExclusion(ApplicationDTO applicationDTO, Response.Status status) {
-        boolean excludeNulls = Boolean.parseBoolean(
-                IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE));
 
-        if (excludeNulls) {
+        boolean excludeNullFieldsInDcrResponse =
+                Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE));
+
+        if (excludeNullFieldsInDcrResponse) {
             ObjectMapper mapper = new ObjectMapper();
             mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
             try {
-                String json = mapper.writeValueAsString(applicationDTO);
-                return Response.status(status).entity(json).type(MediaType.APPLICATION_JSON).build();
+                String applicationDTOString = mapper.writeValueAsString(applicationDTO);
+                return Response.status(status).entity(applicationDTOString).type(MediaType.APPLICATION_JSON).build();
             } catch (JsonProcessingException e) {
-                throw new InternalServerErrorException("Error serializing ApplicationDTO with null exclusion", e);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Error serializing ApplicationDTO with null exclusion", e);
+                }
+                DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e, true, LOG);
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
         } else {
             return Response.status(status).entity(applicationDTO).build();

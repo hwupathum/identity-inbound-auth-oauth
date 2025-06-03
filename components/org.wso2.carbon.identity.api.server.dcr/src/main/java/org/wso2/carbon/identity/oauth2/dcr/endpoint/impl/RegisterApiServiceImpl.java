@@ -82,7 +82,7 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-        return Response.status(Response.Status.OK).entity(applicationDTO).build();
+        return buildResponseWithOptionalNullExclusion(applicationDTO, Response.Status.OK);
     }
 
     @Override
@@ -110,22 +110,7 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-
-        boolean excludeNulls = Boolean.parseBoolean(
-                IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE));
-
-        if (excludeNulls) {
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-            try {
-                String json = mapper.writeValueAsString(applicationDTO);
-                return Response.status(Response.Status.CREATED).entity(json).type(MediaType.APPLICATION_JSON).build();
-            } catch (JsonProcessingException e) {
-                throw new InternalServerErrorException("Error serializing ApplicationDTO with null exclusion", e);
-            }
-        } else {
-            return Response.status(Response.Status.CREATED).entity(applicationDTO).build();
-        }
+        return buildResponseWithOptionalNullExclusion(applicationDTO, Response.Status.CREATED);
     }
 
     @Override
@@ -153,7 +138,7 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-        return Response.status(Response.Status.OK).entity(applicationDTO).build();
+        return buildResponseWithOptionalNullExclusion(applicationDTO, Response.Status.OK);
     }
 
     @Override
@@ -171,6 +156,24 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Exception e) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e, true, LOG);
         }
-        return Response.status(Response.Status.OK).entity(applicationDTO).build();
+        return buildResponseWithOptionalNullExclusion(applicationDTO, Response.Status.OK);
+    }
+
+    private Response buildResponseWithOptionalNullExclusion(ApplicationDTO applicationDTO, Response.Status status) {
+        boolean excludeNulls = Boolean.parseBoolean(
+                IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE));
+
+        if (excludeNulls) {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            try {
+                String json = mapper.writeValueAsString(applicationDTO);
+                return Response.status(status).entity(json).type(MediaType.APPLICATION_JSON).build();
+            } catch (JsonProcessingException e) {
+                throw new InternalServerErrorException("Error serializing ApplicationDTO with null exclusion", e);
+            }
+        } else {
+            return Response.status(status).entity(applicationDTO).build();
+        }
     }
 }

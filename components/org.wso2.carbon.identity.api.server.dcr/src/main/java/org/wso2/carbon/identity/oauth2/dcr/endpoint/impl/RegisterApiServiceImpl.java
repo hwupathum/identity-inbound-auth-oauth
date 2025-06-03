@@ -16,8 +16,13 @@
 
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.impl;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
@@ -29,6 +34,8 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
+import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
@@ -103,7 +110,22 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-        return Response.status(Response.Status.CREATED).entity(applicationDTO).build();
+
+        boolean excludeNulls = Boolean.parseBoolean(
+                IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE));
+
+        if (excludeNulls) {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            try {
+                String json = mapper.writeValueAsString(applicationDTO);
+                return Response.status(Response.Status.CREATED).entity(json).type(MediaType.APPLICATION_JSON).build();
+            } catch (JsonProcessingException e) {
+                throw new InternalServerErrorException("Error serializing ApplicationDTO with null exclusion", e);
+            }
+        } else {
+            return Response.status(Response.Status.CREATED).entity(applicationDTO).build();
+        }
     }
 
     @Override

@@ -391,6 +391,7 @@ public class OAuth2Util {
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
+    private static final String BEARER_AUTHORIZATION_PREFIX = "Bearer ";
 
     private static final List<String> PORTAL_APP_IDS = Arrays.asList(
             ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
@@ -1508,6 +1509,11 @@ public class OAuth2Util {
                     IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
         }
 
+        /**
+         * This method is used to get token endpoint URL when mTLS is enabled.
+         *
+         * @return token endpoint URL when mTLS is enabled.
+         */
         public static String getOAuth2MTLSTokenEPUrl() {
 
             return buildUrlWithHostname(OAUTH2_TOKEN_EP_URL,
@@ -1785,7 +1791,7 @@ public class OAuth2Util {
     public static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile,
                                          String oauth2EndpointURLV2InFile) {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             if (StringUtils.isNotBlank(oauth2EndpointURLV2InFile)) {
                 return oauth2EndpointURLV2InFile;
             }
@@ -1839,7 +1845,7 @@ public class OAuth2Util {
     public static String buildServiceUrlWithHostname(String defaultContext, String oauth2EndpointURLInFile,
                                                      String oauth2EndpointURLInFileV2, String hostname) {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             if (StringUtils.isNotBlank(oauth2EndpointURLInFileV2)) {
                 return oauth2EndpointURLInFileV2;
             }
@@ -4365,7 +4371,7 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isEmpty(PrivilegedCarbonContext.
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
                 getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
@@ -4383,7 +4389,7 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -5412,6 +5418,31 @@ public class OAuth2Util {
         }
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
+    }
+
+
+    /**
+     * Get the bearer token from the oauth header.
+     *
+     * @param request Http servlet request.
+     * @return Bearer token.
+     * @throws OAuthClientAuthnException If an error occurs.
+     */
+    public static String extractBearerTokenFromAuthzHeader(HttpServletRequest request)
+            throws OAuthClientAuthnException {
+
+        String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        if (StringUtils.isEmpty(authorizationHeader)) {
+            authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION.toLowerCase());
+        }
+
+        if (StringUtils.isNotEmpty(authorizationHeader)  &&
+                authorizationHeader.toLowerCase().startsWith(BEARER_AUTHORIZATION_PREFIX.toLowerCase())) {
+            return OAuthUtils.getAuthHeaderField(authorizationHeader);
+        } else {
+            String errMsg = "Bearer authorization header is not available in the request.";
+            throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
+        }
     }
 
     /**

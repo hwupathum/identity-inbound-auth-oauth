@@ -362,7 +362,7 @@ public class OAuthAppDAO {
                                 }
                             }
 
-                            if (!(isRootOrganization(tenantId)) &&
+                            if (!(isRootOrganization(tenantId)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
                                     oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
                                 oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
                                         (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
@@ -481,7 +481,7 @@ public class OAuthAppDAO {
                                 }
                             }
 
-                            if (!(isRootOrganization(tenantId)) &&
+                            if (!(isRootOrganization(tenantId)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
                                     oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
                                 oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
                                         (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
@@ -583,6 +583,7 @@ public class OAuthAppDAO {
                         }
 
                         if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
+                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
                                 oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
                             oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
                                     (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
@@ -669,6 +670,7 @@ public class OAuthAppDAO {
                         }
 
                         if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
+                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
                                 oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
                             oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
                                     (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
@@ -782,7 +784,7 @@ public class OAuthAppDAO {
                                 }
                             }
 
-                            if (!(isRootOrganization(tenantID)) &&
+                            if (!(isRootOrganization(tenantID)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
                                     oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
                                 oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
                                         (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));

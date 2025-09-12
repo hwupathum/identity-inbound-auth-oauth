@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.listener;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -29,18 +28,11 @@ import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntry;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheKey;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -52,8 +44,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
 
 /**
  * This is an implementation of UserOperationEventListener. This defines
@@ -103,7 +93,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        removeTokensFromCache(userName, userStoreManager);
+        OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
         return true;
     }
 
@@ -114,7 +104,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        removeTokensFromCache(userName, userStoreManager);
+        OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
         return true;
     }
 
@@ -180,7 +170,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        removeTokensFromCache(userName, userStoreManager);
+        OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
         return true;
     }
 
@@ -227,7 +217,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         userList.addAll(Arrays.asList(deletedUsers));
         userList.addAll(Arrays.asList(newUsers));
         for (String username : userList) {
-            removeTokensFromCache(username, userStoreManager);
+            OAuthUtil.removeAuthzGrantCacheForUser(username, userStoreManager);
         }
         return true;
     }
@@ -328,61 +318,6 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                     .revokeTokens(userName, userStoreManager);
         }
         return true;
-    }
-
-    private void removeTokensFromCache(String userName, UserStoreManager userStoreManager) throws UserStoreException {
-
-        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-        Set<AccessTokenDO> accessTokenDOSet;
-        List<AuthzCodeDO> authorizationCodeDOSet;
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setUserStoreDomain(userStoreDomain);
-        authenticatedUser.setTenantDomain(tenantDomain);
-        authenticatedUser.setUserName(userName);
-        try {
-            /*
-             Only the tokens and auth codes issued for openid scope should be removed from the cache, since no
-             claims are usually cached against tokens or auth codes, otherwise.
-             */
-            accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .getAccessTokensByUserForOpenidScope(authenticatedUser);
-            authorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()
-                    .getAuthorizationCodeDAO().getAuthorizationCodesByUserForOpenidScope(authenticatedUser);
-            removeAccessTokensFromCache(accessTokenDOSet);
-            removeAuthzCodesFromCache(authorizationCodeDOSet);
-        } catch (IdentityOAuth2Exception e) {
-            String errorMsg = "Error occurred while retrieving access tokens issued for user : " + userName;
-            log.error(errorMsg, e);
-        }
-    }
-
-    private void removeAuthzCodesFromCache(List<AuthzCodeDO> authorizationCodeDOSet) {
-
-        if (CollectionUtils.isNotEmpty(authorizationCodeDOSet)) {
-            for (AuthzCodeDO authorizationCodeDO : authorizationCodeDOSet) {
-                String authorizationCode = authorizationCodeDO.getAuthorizationCode();
-                String authzCodeId = authorizationCodeDO.getAuthzCodeId();
-                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
-                AuthorizationGrantCache.getInstance().clearCacheEntryByCodeId(cacheKey, authzCodeId);
-            }
-        }
-    }
-
-    private void removeAccessTokensFromCache(Set<AccessTokenDO> accessTokenDOSet) {
-
-        if (CollectionUtils.isNotEmpty(accessTokenDOSet)) {
-            for (AccessTokenDO accessTokenDO : accessTokenDOSet) {
-                if (StringUtils.equalsIgnoreCase(OAuthConstants.GrantTypes.PASSWORD,
-                                accessTokenDO.getGrantType())) {
-                    continue;
-                }
-                String accessToken = accessTokenDO.getAccessToken();
-                String tokenId = accessTokenDO.getTokenId();
-                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
-                AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(cacheKey, tokenId);
-            }
-        }
     }
 
     /**

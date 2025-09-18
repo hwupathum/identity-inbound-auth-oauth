@@ -409,10 +409,15 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             log.debug("Retrieving authorization codes of user: " + authenticatedUser.toString());
         }
 
+        Set<String> authorizationCodes = new HashSet<>();
+        // Return empty set if hashing is enabled since we cannot retrieve the codes.
+        if (!isHashDisabled) {
+            return authorizationCodes;
+        }
+
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-        Set<String> authorizationCodes = new HashSet<>();
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authenticatedUser.toString());
         try {
             String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODES_BY_AUTHZUSER;
@@ -437,9 +442,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
                 // if authorization code is not expired.
                 if (OAuth2Util.calculateValidityInMillis(issuedTimeInMillis, validityPeriodInMillis) > 1000) {
-                    if (isHashDisabled) {
-                        authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
-                    }
+                    authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
                 }
             }
         } catch (SQLException e) {
@@ -544,10 +547,15 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             log.debug("Retrieving authorization codes of user: " + authenticatedUser.toString());
         }
 
+        List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
+        // Return empty list if hashing is enabled since we cannot retrieve the codes.
+        if (!isHashDisabled) {
+            return authorizationCodes;
+        }
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
         ResultSet rs;
-        List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
         String authzUser = authenticatedUser.getUserName();
         String tenantDomain = authenticatedUser.getTenantDomain();
         String userStoreDomain = authenticatedUser.getUserStoreDomain();
@@ -585,11 +593,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
                 // Authorization codes that are in ACTIVE state and not expired should be removed from the cache.
                 if (OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0) {
-                    if (isHashDisabled) {
-                        authorizationCodes
-                                .add(new AuthzCodeDO(authenticatedUser, scope, timeCreated, validityPeriodInMillis,
+                    authorizationCodes
+                            .add(new AuthzCodeDO(authenticatedUser, scope, timeCreated, validityPeriodInMillis,
                                         callbackUrl, consumerKey, authorizationCode, authzCodeId));
-                    }
                 }
             }
             connection.commit();
@@ -610,10 +616,15 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             log.debug("Retrieving authorization codes for client: " + consumerKey);
         }
 
+        Set<String> authorizationCodes = new HashSet<>();
+        // Return empty list if hashing is enabled since we cannot retrieve the codes.
+        if (!isHashDisabled) {
+            return authorizationCodes;
+        }
+
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-        Set<String> authorizationCodes = new HashSet<>();
         try {
             String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
@@ -621,9 +632,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
             rs = ps.executeQuery();
             while (rs.next()) {
-                if (isHashDisabled) {
-                    authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
-                }
+                authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
             }
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
@@ -642,10 +651,15 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             log.debug("Retrieving active authorization codes for client: " + consumerKey);
         }
 
+        Set<String> authorizationCodes = new HashSet<>();
+        // Return empty list if hashing is enabled since we cannot retrieve the codes.
+        if (!isHashDisabled) {
+            return authorizationCodes;
+        }
+
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement ps = null;
         ResultSet rs = null;
-        Set<String> authorizationCodes = new HashSet<>();
         try {
             String sqlQuery = SQLQueries.GET_ACTIVE_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
@@ -654,9 +668,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             ps.setString(3, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
-                if (isHashDisabled) {
-                    authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
-                }
+                authorizationCodes.add(getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1)));
             }
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
@@ -963,10 +975,16 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         if (log.isDebugEnabled()) {
             log.debug("Retrieving active authorization code data objects for client: " + consumerKey);
         }
+        Set<AuthzCodeDO> authzCodeDOs = new HashSet<>();
+
+        // Return empty set if hashing is enabled since we cannot retrieve the codes.
+        if (!isHashDisabled) {
+            return authzCodeDOs;
+        }
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
-        Set<AuthzCodeDO> authzCodeDOs = new HashSet<>();
         String sqlQuery = SQLQueries.GET_DETAILED_ACTIVE_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
         try {
             ps = connection.prepareStatement(sqlQuery);
@@ -987,9 +1005,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 authzCodeDO.setAuthzCodeId(codeId);
 
                 if (isActiveAuthzCodeIssuedForOidcFlow(scope, issuedTimeInMillis, validityPeriodInMillis)) {
-                    if (isHashDisabled) {
-                        authzCodeDOs.add(authzCodeDO);
-                    }
+                    authzCodeDOs.add(authzCodeDO);
                 }
             }
             connection.commit();

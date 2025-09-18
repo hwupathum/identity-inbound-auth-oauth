@@ -548,7 +548,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         }
 
         List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
-        // Return empty list if hashing is enabled since we cannot retrieve the codes.
+        // Return empty set if hashing is enabled since we cannot retrieve the codes.
         if (!isHashDisabled) {
             return authorizationCodes;
         }
@@ -617,7 +617,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         }
 
         Set<String> authorizationCodes = new HashSet<>();
-        // Return empty list if hashing is enabled since we cannot retrieve the codes.
+        // Return empty set if hashing is enabled since we cannot retrieve the codes.
         if (!isHashDisabled) {
             return authorizationCodes;
         }
@@ -652,7 +652,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         }
 
         Set<String> authorizationCodes = new HashSet<>();
-        // Return empty list if hashing is enabled since we cannot retrieve the codes.
+        // Return empty set if hashing is enabled since we cannot retrieve the codes.
         if (!isHashDisabled) {
             return authorizationCodes;
         }

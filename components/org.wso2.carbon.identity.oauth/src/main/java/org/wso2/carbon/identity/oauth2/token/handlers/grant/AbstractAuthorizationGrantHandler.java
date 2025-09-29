@@ -429,7 +429,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
 
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
-        return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
+        return createResponseWithTokenBean(tokReqMsgCtx, existingTokenBean, expireTime, scope);
     }
 
     private OAuth2AccessTokenRespDTO generateNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
@@ -460,7 +460,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         // Update cache with newly added token.
         updateCacheIfEnabled(newTokenBean, OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()), oauthTokenIssuer);
-        return createResponseWithTokenBean(newTokenBean, validityPeriodInMillis, scope);
+        return createResponseWithTokenBean(tokReqMsgCtx, newTokenBean, validityPeriodInMillis, scope);
     }
 
     private boolean isExistingTokenValid(AccessTokenDO existingTokenBean, long expireTime) {
@@ -737,9 +737,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
     }
 
-    private OAuth2AccessTokenRespDTO createResponseWithTokenBean(AccessTokenDO existingAccessTokenDO,
+    private OAuth2AccessTokenRespDTO createResponseWithTokenBean(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                                                 AccessTokenDO existingAccessTokenDO,
                                                                  long expireTimeMillis, String scope)
             throws IdentityOAuth2Exception {
+
         OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
         tokenRespDTO.setAccessToken(existingAccessTokenDO.getAccessToken());
         tokenRespDTO.setTokenId(existingAccessTokenDO.getTokenId());
@@ -760,7 +762,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 supportedGrantTypes = Arrays.asList(grantTypes.split(" "));
             }
             if (supportedGrantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN)) {
-                tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
+                if (!tokenReqMessageContext.isImpersonationRequest()) {
+                    tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
+                }
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Refresh grant is not allowed for client_id : " + consumerKey + ", therefore not " +

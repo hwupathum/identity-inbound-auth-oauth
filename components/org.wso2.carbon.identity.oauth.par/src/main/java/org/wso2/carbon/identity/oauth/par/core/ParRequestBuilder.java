@@ -54,6 +54,9 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
         try {
             params = ParAuthServiceComponentDataHolder.getInstance().getParAuthService()
                     .retrieveParams(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
+            if (params.containsKey("state")) {
+                request.setAttribute("parRequestState", params.get("state"));
+            }
         } catch (ParClientException e) {
             throw new ParAuthFailureException(e.getErrorCode(), e.getMessage(), e);
         } catch (ParCoreException e) {

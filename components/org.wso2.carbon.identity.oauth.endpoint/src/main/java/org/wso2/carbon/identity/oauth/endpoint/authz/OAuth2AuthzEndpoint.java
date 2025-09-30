@@ -2601,7 +2601,15 @@ public class OAuth2AuthzEndpoint {
             scopeSet.add("");
             params.setScopes(scopeSet);
         }
-        params.setState(oauthRequest.getState());
+
+        if (isFapiConformant(oAuthMessage.getClientId())) {
+            Object parState = oAuthMessage.getRequest().getAttribute("parRequestState");
+            if (parState != null) {
+                params.setState(parState.toString());
+            }
+        } else {
+            params.setState(oauthRequest.getState());
+        }
         params.setApplicationName(validationResponse.getApplicationName());
 
         String spDisplayName = getSpDisplayName(clientId);
@@ -2754,10 +2762,10 @@ public class OAuth2AuthzEndpoint {
         /* Mandate request object for FAPI requests.
            https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1)  */
         if (isFapiConformant(oAuthMessage.getClientId())) {
-            if (requestObjValue == null) {
+            /*if (requestObjValue == null) {
                 throw new InvalidRequestException("Request Object is mandatory for FAPI Conformant Applications.",
                         OAuth2ErrorCodes.INVALID_REQUEST, "Request object is missing.");
-            }
+            }*/
         }
 
         if (StringUtils.isNotEmpty(requestObjValue)) {

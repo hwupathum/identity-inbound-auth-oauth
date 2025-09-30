@@ -403,11 +403,12 @@ public class OAuth2ParEndpoint {
                         throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                                 ParConstants.INVALID_REQUEST_OBJECT);
                     }
-                } else if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
-                    /* Mandate request object for FAPI requests
-                    https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1) */
+                } /*else if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
+                    *//* Mandate request object for FAPI requests
+                    https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1) *//*
                     throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.REQUEST_OBJECT_MISSING);
-                }
+                }*/
+
             }
             return requestObject;
         } catch (RequestObjectException e) {

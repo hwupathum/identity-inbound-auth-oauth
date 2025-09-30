@@ -126,11 +126,12 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
             if (StringUtils.isNotBlank(subjectToken)) {
                 appendQueryParam(queryParams, OAuthConstants.SUBJECT_TOKEN, subjectToken);
             }
-
+            appendQueryParam(queryParams, "iss", "https://ishost:9446/oauth2/token");
             redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,
                     String.join("&", queryParams));
         } else {
-            redirectUrl += "?" +
+            String paramSeparator = redirectUrl.contains("?") ? "&" : "?";
+            redirectUrl += paramSeparator +
                     OAuthConstants.OAUTH_ERROR + "=" + authorizationResponseDTO.getErrorResponseDTO().getError() +
                     "&" + OAuthConstants.OAUTH_ERROR_DESCRIPTION + "=" +
                     authorizationResponseDTO.getErrorResponseDTO().getErrorDescription()

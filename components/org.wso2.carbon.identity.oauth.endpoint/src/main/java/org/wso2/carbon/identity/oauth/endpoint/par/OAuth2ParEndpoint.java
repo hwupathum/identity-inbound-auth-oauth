@@ -324,7 +324,8 @@ public class OAuth2ParEndpoint {
             OAuthAuthzRequest oAuthAuthzRequest = getOAuthAuthzRequest(request);
             RequestObject requestObject = validateRequestObject(oAuthAuthzRequest);
             Map<String, String> oauthParams = overrideRequestObjectParams(request, requestObject);
-            if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
+            if (isFapiConformant(oAuthAuthzRequest.getClientId()) && OAuthConstants.FAPIVersions.
+                    FAPI1_ADVANCED.equals(OAuthServerConfiguration.getInstance().getFapiVersion())) {
                 EndpointUtil.validateFAPIAllowedResponseTypeAndMode(oauthParams.get(RESPONSE_TYPE),
                         oauthParams.get(RESPONSE_MODE));
                 validatePKCEParameters(oauthParams);
@@ -403,11 +404,12 @@ public class OAuth2ParEndpoint {
                         throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                                 ParConstants.INVALID_REQUEST_OBJECT);
                     }
-                } /*else if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
-                    *//* Mandate request object for FAPI requests
-                    https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1) *//*
+                } else if (isFapiConformant(oAuthAuthzRequest.getClientId()) && OAuthConstants.FAPIVersions.
+                        FAPI1_ADVANCED.equals(OAuthServerConfiguration.getInstance().getFapiVersion())) {
+                    /* Mandate request object for FAPI 1.0 Advanced requests
+                    https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1) */
                     throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.REQUEST_OBJECT_MISSING);
-                }*/
+                }
 
             }
             return requestObject;

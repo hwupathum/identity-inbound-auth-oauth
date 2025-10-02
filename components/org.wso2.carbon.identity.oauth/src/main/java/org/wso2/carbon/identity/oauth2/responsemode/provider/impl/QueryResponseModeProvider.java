@@ -23,10 +23,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AbstractResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -126,7 +130,17 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
             if (StringUtils.isNotBlank(subjectToken)) {
                 appendQueryParam(queryParams, OAuthConstants.SUBJECT_TOKEN, subjectToken);
             }
-            appendQueryParam(queryParams, "iss", "https://ishost:9446/oauth2/token");
+
+            try {
+                if (OAuth2Util.isFapiConformantApp(authorizationResponseDTO.getClientId()) &&
+                        OAuthConstants.FAPIVersions.FAPI2.equals(
+                                OAuthServerConfiguration.getInstance().getFapiVersion())) {
+                    // For FAPI 2.0 compliance, issuer should be included in the authorization response
+                    appendQueryParam(queryParams, OAuth2Util.ISS, "https://ishost:9446/oauth2/token");
+                }
+            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+                log.error("Error occurred while retrieving application details.", e);
+            }
             redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,
                     String.join("&", queryParams));
         } else {

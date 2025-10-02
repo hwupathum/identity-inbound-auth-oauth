@@ -639,7 +639,8 @@ public class AuthorizationHandlerManager {
         if (!isAuthorizedClient) {
             String errorCode;
             try {
-                if (OAuth2Util.isFapiConformantApp(authzReqDTO.getConsumerKey())) {
+                if (OAuth2Util.isFapiConformantApp(authzReqDTO.getConsumerKey()) && OAuthConstants.FAPIVersions.
+                        FAPI2.equals(OAuthServerConfiguration.getInstance().getFapiVersion())) {
                     errorCode = OAuth2ErrorCodes.INVALID_REQUEST;
                 } else {
                     errorCode = UNAUTHORIZED_CLIENT;

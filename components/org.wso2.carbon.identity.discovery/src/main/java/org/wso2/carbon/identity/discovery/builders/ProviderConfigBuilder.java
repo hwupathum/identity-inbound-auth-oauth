@@ -160,6 +160,8 @@ public class ProviderConfigBuilder {
             providerConfig
                     .setAuthorizationDetailsTypesSupported(authorizationDetailTypes.stream().toArray(String[]::new));
         }
+        providerConfig.setAuthorizationResponseIssParameterSupported(
+                OAuthServerConfiguration.getInstance().getIncludeIssInAuthResponse());
         return providerConfig;
     }
 }

@@ -214,6 +214,8 @@ public class OAuthServerConfiguration {
     private String[] supportedClaims = null;
     private boolean isFapiCiba = false;
     private boolean isFapiSecurity = false;
+    private String fapiVersion = "1";
+    private boolean includeISSInAuthResponse = false;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
@@ -3708,7 +3710,20 @@ public class OAuthServerConfiguration {
                             Boolean.parseBoolean(fapiElem.getFirstChildWithName(getQNameWithIdentityNS
                                     (ConfigElements.ENABLE_FAPI_SECURITY_PROFILE)).getText().trim());
                 }
+                if (fapiElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.FAPI_VERSION)) != null) {
+                    fapiVersion = fapiElem.getFirstChildWithName(getQNameWithIdentityNS(
+                            ConfigElements.FAPI_VERSION)).getText().trim();
+                }
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                    .INCLUDE_ISS_IN_AUTH_RESPONSE)) != null) {
+                if (Boolean.TRUE.toString().equals(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
+                        (ConfigElements.INCLUDE_ISS_IN_AUTH_RESPONSE)).getText().trim())) {
+                    includeISSInAuthResponse = true;
+                }
+            }
+
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
                     .REQUEST_OBJECT_ENABLED)) != null) {
                 if (Boolean.FALSE.toString().equals(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
@@ -4091,6 +4106,20 @@ public class OAuthServerConfiguration {
         return isFapiSecurity;
     }
 
+    /**
+     * This method returns the FAPI version supported by the server configured in identity.xml.
+     */
+    public String getFapiVersion() {
+        return fapiVersion;
+    }
+
+    /**
+     * This method returns whether returning issuer in the authorization response is supported.
+     */
+    public boolean getIncludeIssInAuthResponse() {
+        return includeISSInAuthResponse;
+    }
+
     public boolean isGlobalRbacScopeIssuerEnabled() {
 
         return globalRbacScopeIssuerEnabled;
@@ -4469,6 +4498,7 @@ public class OAuthServerConfiguration {
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";
+        private static final String FAPI_VERSION = "FAPIVersion";
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
@@ -4482,6 +4512,7 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
+        private static final String INCLUDE_ISS_IN_AUTH_RESPONSE = "IncludeISSInAuthResponse";
     }
 
 }

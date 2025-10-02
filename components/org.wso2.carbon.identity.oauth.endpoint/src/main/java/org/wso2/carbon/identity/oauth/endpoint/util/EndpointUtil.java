@@ -1912,7 +1912,7 @@ public class EndpointUtil {
     }
 
     /**
-     * Validate the response mode against the response type as per FAPI spec.
+     * Validate the response mode against the response type as per FAPI 1.0 Advanced spec.
      * shall require;
      * 1. the response_type value code id_token, or
      * 2. the response_type value code in conjunction with the response_mode value jwt;
@@ -1925,10 +1925,10 @@ public class EndpointUtil {
     public static void validateFAPIAllowedResponseTypeAndMode(String responseType, String responseMode)
             throws OAuthProblemException {
 
-        /*if (!(CODE_IDTOKEN.equals(responseType) || (CODE.equals(responseType) && JWT.equals(responseMode)))) {
+        if (!(CODE_IDTOKEN.equals(responseType) || (CODE.equals(responseType) && JWT.equals(responseMode)))) {
             throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST)
                     .description("Invalid response mode provided.");
-        }*/
+        }
     }
 
     /**

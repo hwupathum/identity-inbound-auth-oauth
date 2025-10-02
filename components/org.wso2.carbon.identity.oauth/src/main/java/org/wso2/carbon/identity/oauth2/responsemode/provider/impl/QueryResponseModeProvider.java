@@ -136,7 +136,7 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
                         OAuthConstants.FAPIVersions.FAPI2.equals(
                                 OAuthServerConfiguration.getInstance().getFapiVersion())) {
                     // For FAPI 2.0 compliance, issuer should be included in the authorization response
-                    appendQueryParam(queryParams, OAuth2Util.ISS, "https://ishost:9446/oauth2/token");
+                    appendQueryParam(queryParams, OAuth2Util.ISS, OAuth2Util.getIDTokenIssuer());
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
                 log.error("Error occurred while retrieving application details.", e);

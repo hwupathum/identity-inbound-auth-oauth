@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AbstractResponseModeProvider;
@@ -133,8 +132,7 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
 
             try {
                 if (OAuth2Util.isFapiConformantApp(authorizationResponseDTO.getClientId()) &&
-                        OAuthConstants.FAPIVersions.FAPI2.equals(
-                                OAuthServerConfiguration.getInstance().getFapiVersion())) {
+                        OAuth2Util.isFapi2Enabled()) {
                     // For FAPI 2.0 compliance, issuer should be included in the authorization response
                     appendQueryParam(queryParams, OAuth2Util.ISS, OAuth2Util.getIDTokenIssuer());
                 }

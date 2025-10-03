@@ -4110,6 +4110,7 @@ public class OAuthServerConfiguration {
      * This method returns the FAPI version supported by the server configured in identity.xml.
      */
     public String getFapiVersion() {
+
         return fapiVersion;
     }
 

@@ -4389,7 +4389,17 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
+        Boolean isFapi2App;
+        try {
+            isFapi2App = isFapiConformantApp(clientId) && isFapi2Enabled();
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving application information", e);
+        }
+        /* Returning IDTokenIssuerID defined in identity.xml for FAPI 2.0 applications.
+           Token endpoint will be returned if not defined. */
+        if (isFapi2App) {
+            return getIDTokenIssuer();
+        } else if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -5374,6 +5384,27 @@ public class OAuth2Util {
         String tenantDomain = getTenantDomain();
         OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
         return oAuthAppDO.isFapiConformanceEnabled();
+    }
+
+    /**
+     * Check whether FAPI 1.0 Advanced is enabled in the server.
+     *
+     * @return Whether FAPI 1.0 Advanced is enabled in the server.
+     */
+    public static boolean isFapi1Enabled() {
+
+        return OAuthConstants.FAPIVersions.FAPI1_ADVANCED.equals(
+                OAuthServerConfiguration.getInstance().getFapiVersion());
+    }
+
+    /**
+     * Check whether FAPI 2.0 is enabled in the server.
+     *
+     * @return Whether FAPI 2.0 is enabled in the server.
+     */
+    public static boolean isFapi2Enabled() {
+
+        return OAuthConstants.FAPIVersions.FAPI2.equals(OAuthServerConfiguration.getInstance().getFapiVersion());
     }
 
     /**

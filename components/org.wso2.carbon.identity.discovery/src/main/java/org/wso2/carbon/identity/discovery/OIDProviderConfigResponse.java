@@ -543,10 +543,12 @@ public class OIDProviderConfigResponse {
     }
 
     public Boolean getAuthorizationResponseIssParameterSupported() {
+
         return authorizationResponseIssParameterSupported;
     }
 
     public void setAuthorizationResponseIssParameterSupported(Boolean authorizationResponseIssParameterSupported) {
+
         this.authorizationResponseIssParameterSupported = authorizationResponseIssParameterSupported;
     }
 

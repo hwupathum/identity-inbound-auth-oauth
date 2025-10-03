@@ -639,14 +639,14 @@ public class AuthorizationHandlerManager {
         if (!isAuthorizedClient) {
             String errorCode;
             try {
-                if (OAuth2Util.isFapiConformantApp(authzReqDTO.getConsumerKey()) && OAuthConstants.FAPIVersions.
-                        FAPI2.equals(OAuthServerConfiguration.getInstance().getFapiVersion())) {
+                if (OAuth2Util.isFapiConformantApp(authzReqDTO.getConsumerKey()) && OAuth2Util.isFapi2Enabled()) {
                     errorCode = OAuth2ErrorCodes.INVALID_REQUEST;
                 } else {
                     errorCode = UNAUTHORIZED_CLIENT;
                 }
             } catch (InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception("Error occurred while retrieving application details.", e);
+                throw new IdentityOAuth2Exception("Error occurred while retrieving the fapi conformance of the " +
+                        "application.", e);
             }
             handleErrorRequest(authorizeRespDTO, errorCode,
                     "The authenticated client is not authorized to use this authorization grant type");

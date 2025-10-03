@@ -49,7 +49,6 @@ public class ParConstants {
     public static final String REQUEST_OBJECT_MISSING = "Request object is missing.";
     public static final String PAR_STATE = "parRequestState";
 
-
     private ParConstants() {
 
     }

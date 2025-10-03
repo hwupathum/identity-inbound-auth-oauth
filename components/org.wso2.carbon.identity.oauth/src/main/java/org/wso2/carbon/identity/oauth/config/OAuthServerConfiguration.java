@@ -3716,9 +3716,9 @@ public class OAuthServerConfiguration {
                 }
             }
 
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+            if (oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
                     .INCLUDE_ISS_IN_AUTH_RESPONSE)) != null) {
-                if (Boolean.TRUE.toString().equals(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
+                if (Boolean.TRUE.toString().equals(oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS
                         (ConfigElements.INCLUDE_ISS_IN_AUTH_RESPONSE)).getText().trim())) {
                     includeISSInAuthResponse = true;
                 }

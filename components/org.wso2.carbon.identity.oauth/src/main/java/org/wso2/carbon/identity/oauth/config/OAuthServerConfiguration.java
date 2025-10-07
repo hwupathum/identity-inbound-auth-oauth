@@ -214,7 +214,7 @@ public class OAuthServerConfiguration {
     private String[] supportedClaims = null;
     private boolean isFapiCiba = false;
     private boolean isFapiSecurity = false;
-    private String fapiVersion = "1";
+    private String fapiVersion = OAuthConstants.FAPIVersions.FAPI1_ADVANCED;
     private boolean includeISSInAuthResponse = false;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;

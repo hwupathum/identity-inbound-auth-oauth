@@ -403,6 +403,8 @@ public class JWTTokenIssuerTest {
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
             oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getIssuer(anyString(), anyString(), anyBoolean())).
+                    thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any())).thenReturn(Collections.singletonList
                     (DUMMY_CLIENT_ID));
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);

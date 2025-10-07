@@ -4364,6 +4364,33 @@ public class OAuth2Util {
         return userId;
     }
 
+    /**
+     * Get issuer based on the tenant domain and client id.
+     *
+     * @param tenantDomain - tenant domain
+     * @param clientId - client id
+     * @param isMtlsRequest - whether the request is mtls request
+     * @return - issuer
+     * @throws IdentityOAuth2Exception - IdentityOAuth2Exception
+     */
+    public static String getIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
+            throws IdentityOAuth2Exception {
+
+        boolean isFapi2App;
+        try {
+            isFapi2App = isFapiConformantApp(clientId) && isFapi2Enabled();
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving application information", e);
+        }
+        /* Returning IDTokenIssuerID defined in identity.xml for FAPI 2.0 applications.
+           Token endpoint will be returned if not defined. */
+        if (isFapi2App) {
+            return getIDTokenIssuer();
+        } else {
+            return getIdTokenIssuer(tenantDomain, isMtlsRequest);
+        }
+    }
+
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
         return getIdTokenIssuer(tenantDomain, false);
@@ -4389,7 +4416,7 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        Boolean isFapi2App;
+        boolean isFapi2App;
         try {
             isFapi2App = isFapiConformantApp(clientId) && isFapi2Enabled();
         } catch (InvalidOAuthClientException e) {

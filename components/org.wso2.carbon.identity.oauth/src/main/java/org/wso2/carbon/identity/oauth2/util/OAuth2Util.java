@@ -4181,6 +4181,9 @@ public class OAuth2Util {
 
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
+                if (true) {
+                    return getResidentIdpEntityId(tenantDomain);
+                }
                 return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +

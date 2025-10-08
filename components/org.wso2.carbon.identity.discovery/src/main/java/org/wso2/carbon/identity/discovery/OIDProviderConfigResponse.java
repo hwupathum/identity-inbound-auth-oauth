@@ -86,7 +86,6 @@ public class OIDProviderConfigResponse {
     private String mtlsTokenEndpoint;
     private String mtlsPushedAuthorizationRequestEndpoint;
     private String[] authorizationDetailsTypesSupported;
-    private Boolean authorizationResponseIssParameterSupported;
 
     private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
 
@@ -542,16 +541,6 @@ public class OIDProviderConfigResponse {
         this.authorizationDetailsTypesSupported = authorizationDetailsTypesSupported;
     }
 
-    public Boolean getAuthorizationResponseIssParameterSupported() {
-
-        return authorizationResponseIssParameterSupported;
-    }
-
-    public void setAuthorizationResponseIssParameterSupported(Boolean authorizationResponseIssParameterSupported) {
-
-        this.authorizationResponseIssParameterSupported = authorizationResponseIssParameterSupported;
-    }
-
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -628,8 +617,6 @@ public class OIDProviderConfigResponse {
         }
         configMap.put(DiscoveryConstants.AUTHORIZATION_DETAILS_TYPES_SUPPORTED,
                 this.authorizationDetailsTypesSupported);
-        configMap.put(DiscoveryConstants.AUTHORIZATION_RESPONSE_ISS_PARAMETER_SUPPORTED,
-                this.authorizationResponseIssParameterSupported);
         return configMap;
     }
 }

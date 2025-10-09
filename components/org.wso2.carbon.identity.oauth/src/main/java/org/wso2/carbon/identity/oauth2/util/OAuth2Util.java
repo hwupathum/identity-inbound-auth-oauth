@@ -4369,32 +4369,6 @@ public class OAuth2Util {
         return userId;
     }
 
-    /**
-     * Get issuer based on the tenant domain and client id.
-     *
-     * @param tenantDomain - tenant domain
-     * @param clientId - client id
-     * @param isMtlsRequest - whether the request is mtls request
-     * @return - issuer
-     * @throws IdentityOAuth2Exception - IdentityOAuth2Exception
-     */
-    public static String getIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
-            throws IdentityOAuth2Exception {
-
-        boolean isFapi2App;
-        try {
-            isFapi2App = isFapiConformantApp(clientId) && isFapi2Enabled();
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error occurred while retrieving application information", e);
-        }
-        // Returning residentIdpEntityId for FAPI 2.0 applications.
-        if (isFapi2App) {
-            return getResidentIdpEntityId(tenantDomain);
-        } else {
-            return getIdTokenIssuer(tenantDomain, isMtlsRequest);
-        }
-    }
-
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
         return getIdTokenIssuer(tenantDomain, false);
@@ -4405,12 +4379,15 @@ public class OAuth2Util {
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
                 getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
-                // Returning residentIdpEntityId as issuer when FAPI 2.0 is enabled.
-                if (isFapi2Enabled()) {
+                /* Returning residentIdpEntityId as issuer when useEntityIDAsIssuer configuration is enabled or
+                   FAPI 2.0 is enabled. */
+                if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled() || isFapi2Enabled()) {
                     return getResidentIdpEntityId(tenantDomain);
                 }
-                return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
-                        ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+                if (isMtlsRequest) {
+                    return OAuthURL.getOAuth2MTLSTokenEPUrl();
+                }
+                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
@@ -4424,14 +4401,8 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        boolean isFapi2App;
-        try {
-            isFapi2App = isFapiConformantApp(clientId) && isFapi2Enabled();
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error occurred while retrieving application information", e);
-        }
-        // Returning residentIdpEntityId for FAPI 2.0 applications.
-        if (isFapi2App) {
+        // Returning residentIdpEntityId if FAPI 2.0 is enabled.
+        if (isFapi2Enabled()) {
             return getResidentIdpEntityId(tenantDomain);
         } else if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {

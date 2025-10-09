@@ -180,7 +180,7 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
     protected static String getIssuer(AuthorizationResponseDTO authorizationResponseDTO) throws OAuthSystemException {
 
         try {
-            return OAuth2Util.getIssuer(authorizationResponseDTO.getSigningTenantDomain(),
+            return OAuth2Util.getIdTokenIssuer(authorizationResponseDTO.getSigningTenantDomain(),
                     authorizationResponseDTO.getClientId(), authorizationResponseDTO.isMtlsRequest());
         } catch (IdentityOAuth2Exception e) {
             authorizationResponseDTO.setError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,

@@ -134,7 +134,8 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
                 if (OAuth2Util.isFapiConformantApp(authorizationResponseDTO.getClientId()) &&
                         OAuth2Util.isFapi2Enabled()) {
                     // For FAPI 2.0 compliance, issuer should be included in the authorization response
-                    appendQueryParam(queryParams, OAuth2Util.ISS, OAuth2Util.getIDTokenIssuer());
+                    appendQueryParam(queryParams, OAuth2Util.ISS, OAuth2Util.getIdTokenIssuer(
+                            authorizationResponseDTO.getSigningTenantDomain()));
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
                 log.error("Error occurred while retrieving application details.", e);

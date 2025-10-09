@@ -259,7 +259,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String spTenantDomain = getSpTenantDomain(authzReqMessageContext);
         Object isMtls = authzReqMessageContext.getProperty(OAuthConstants.IS_MTLS_REQUEST);
         boolean isMtlsRequest = isMtls != null && Boolean.parseBoolean(isMtls.toString());
-        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, clientId, isMtlsRequest);
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, isMtlsRequest);
         JWSAlgorithm idTokenSignatureAlgorithm = signatureAlgorithm;
 
         // Initialize OAuthAppDO using the client ID.

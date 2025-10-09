@@ -139,7 +139,6 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
                             authorizationResponseDTO.getSigningTenantDomain()));
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                log.error("Error occurred while retrieving application details.", e);
                 throw new OAuthRuntimeException("Error occurred while retrieving application details. ", e);
             }
             redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,

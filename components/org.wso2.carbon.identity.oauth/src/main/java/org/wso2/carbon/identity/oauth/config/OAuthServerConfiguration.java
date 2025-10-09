@@ -215,7 +215,6 @@ public class OAuthServerConfiguration {
     private boolean isFapiCiba = false;
     private boolean isFapiSecurity = false;
     private String fapiVersion = OAuthConstants.FAPIVersions.FAPI1_ADVANCED;
-    private boolean includeISSInAuthResponse = false;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
@@ -3729,14 +3728,6 @@ public class OAuthServerConfiguration {
                 }
             }
 
-            if (oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
-                    .INCLUDE_ISS_IN_AUTH_RESPONSE)) != null) {
-                if (Boolean.TRUE.toString().equals(oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS
-                        (ConfigElements.INCLUDE_ISS_IN_AUTH_RESPONSE)).getText().trim())) {
-                    includeISSInAuthResponse = true;
-                }
-            }
-
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
                     .REQUEST_OBJECT_ENABLED)) != null) {
                 if (Boolean.FALSE.toString().equals(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
@@ -4125,13 +4116,6 @@ public class OAuthServerConfiguration {
     public String getFapiVersion() {
 
         return fapiVersion;
-    }
-
-    /**
-     * This method returns whether returning issuer in the authorization response is supported.
-     */
-    public boolean getIncludeIssInAuthResponse() {
-        return includeISSInAuthResponse;
     }
 
     public boolean isGlobalRbacScopeIssuerEnabled() {
@@ -4527,7 +4511,6 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
-        private static final String INCLUDE_ISS_IN_AUTH_RESPONSE = "IncludeISSInAuthResponse";
     }
 
 }

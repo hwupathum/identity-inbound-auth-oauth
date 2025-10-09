@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.responsemode.provider.impl;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -139,6 +140,7 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
                 log.error("Error occurred while retrieving application details.", e);
+                throw new OAuthRuntimeException("Error occurred while retrieving application details. ", e);
             }
             redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,
                     String.join("&", queryParams));

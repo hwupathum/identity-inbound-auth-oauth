@@ -1424,11 +1424,6 @@ public class OAuth2Util {
         throw new IllegalArgumentException("Cannot create user from empty user name");
     }
 
-    /**
-     * Returns the IDTokenIssuerID configured in identity.xml. If not configured, returns the token endpoint URL.
-     *
-     * @return
-     */
     public static String getIDTokenIssuer() {
 
         String issuer = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenIssuerIdentifier();

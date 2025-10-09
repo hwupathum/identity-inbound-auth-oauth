@@ -336,7 +336,6 @@ public class OAuth2Util {
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     public static final String JWT = "JWT";
-    private static final String USE_ENTITY_ID_AS_ISSUER = "OAuth.OpenIDConnect.UseEntityIdAsIssuer";
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
     private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();
@@ -4182,7 +4181,7 @@ public class OAuth2Util {
 
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
-                if(isUseEntityIDAsIssuerEnabled()) {
+                if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
                     return getResidentIdpEntityId(tenantDomain);
                 }
                 return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
@@ -4195,17 +4194,6 @@ public class OAuth2Util {
             return getIssuerLocation(tenantDomain);
         }
     }
-
-    // Check whether config is enabled to configure Entity ID in Resident IDP
-    private static boolean isUseEntityIDAsIssuerEnabled() {
-
-        String configureEntityId = IdentityUtil.getProperty(USE_ENTITY_ID_AS_ISSUER);
-        if (StringUtils.isBlank(configureEntityId)) {
-            return false;
-        }
-        return Boolean.parseBoolean(configureEntityId);
-    }
-
 
     /**
      * Used to get the issuer url for a given tenant.

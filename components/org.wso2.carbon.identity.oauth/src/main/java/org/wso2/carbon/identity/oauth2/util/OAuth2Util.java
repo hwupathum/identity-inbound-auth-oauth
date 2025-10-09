@@ -1424,6 +1424,11 @@ public class OAuth2Util {
         throw new IllegalArgumentException("Cannot create user from empty user name");
     }
 
+    /**
+     * Returns the IDTokenIssuerID configured in identity.xml. If not configured, returns the token endpoint URL.
+     *
+     * @return
+     */
     public static String getIDTokenIssuer() {
 
         String issuer = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenIssuerIdentifier();
@@ -4382,10 +4387,9 @@ public class OAuth2Util {
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving application information", e);
         }
-        /* Returning IDTokenIssuerID defined in identity.xml for FAPI 2.0 applications.
-           Token endpoint will be returned if not defined. */
+        // Returning residentIdpEntityId for FAPI 2.0 applications.
         if (isFapi2App) {
-            return getIDTokenIssuer();
+            return getResidentIdpEntityId(tenantDomain);
         } else {
             return getIdTokenIssuer(tenantDomain, isMtlsRequest);
         }
@@ -4401,6 +4405,10 @@ public class OAuth2Util {
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
                 getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
+                // Returning residentIdpEntityId as issuer when FAPI 2.0 is enabled.
+                if (isFapi2Enabled()) {
+                    return getResidentIdpEntityId(tenantDomain);
+                }
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
@@ -4422,10 +4430,9 @@ public class OAuth2Util {
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving application information", e);
         }
-        /* Returning IDTokenIssuerID defined in identity.xml for FAPI 2.0 applications.
-           Token endpoint will be returned if not defined. */
+        // Returning residentIdpEntityId for FAPI 2.0 applications.
         if (isFapi2App) {
-            return getIDTokenIssuer();
+            return getResidentIdpEntityId(tenantDomain);
         } else if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :

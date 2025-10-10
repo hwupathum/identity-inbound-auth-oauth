@@ -4396,11 +4396,12 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        /* Returning residentIdpEntityId as issuer when useEntityIDAsIssuer configuration is enabled or
-           FAPI 2.0 is enabled. */
-        if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled() || isFapi2Enabled()) {
-            return getResidentIdpEntityId(tenantDomain);
-        } else if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
+            /* Returning residentIdpEntityId as issuer when useEntityIDAsIssuer configuration is enabled or
+               FAPI 2.0 is enabled. */
+            if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled() || isFapi2Enabled()) {
+                return getResidentIdpEntityId(tenantDomain);
+            }
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(

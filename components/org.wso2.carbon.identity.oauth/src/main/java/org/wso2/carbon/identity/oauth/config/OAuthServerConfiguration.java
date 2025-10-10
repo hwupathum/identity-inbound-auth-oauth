@@ -214,6 +214,7 @@ public class OAuthServerConfiguration {
     private String[] supportedClaims = null;
     private boolean isFapiCiba = false;
     private boolean isFapiSecurity = false;
+    private String fapiVersion = OAuthConstants.FAPIVersions.FAPI1_ADVANCED;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
@@ -242,6 +243,7 @@ public class OAuthServerConfiguration {
     private boolean addTenantDomainToIdTokenEnabled = false;
     private boolean addUserstoreDomainToIdTokenEnabled = false;
     private boolean requestObjectEnabled = true;
+    private boolean useEntityIDAsIssuer = false;
 
     //default token types
     public static final String DEFAULT_TOKEN_TYPE = "Default";
@@ -1657,6 +1659,10 @@ public class OAuthServerConfiguration {
 
     public String getUserInfoJWTSignatureAlgorithm() {
         return userInfoJWTSignatureAlgorithm;
+    }
+
+    public boolean getIsUseEntityIDAsIssuerEnabled() {
+        return useEntityIDAsIssuer;
     }
 
     /**
@@ -3644,6 +3650,14 @@ public class OAuthServerConfiguration {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
                         getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)).getText().trim());
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)) != null) {
+                useEntityIDAsIssuer = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)).
+                        getText().trim());
+            }
+
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS)) != null) {
                 String supportedClaimStr = openIDConnectConfigElem
@@ -3712,7 +3726,12 @@ public class OAuthServerConfiguration {
                             Boolean.parseBoolean(fapiElem.getFirstChildWithName(getQNameWithIdentityNS
                                     (ConfigElements.ENABLE_FAPI_SECURITY_PROFILE)).getText().trim());
                 }
+                if (fapiElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.FAPI_VERSION)) != null) {
+                    fapiVersion = fapiElem.getFirstChildWithName(getQNameWithIdentityNS(
+                            ConfigElements.FAPI_VERSION)).getText().trim();
+                }
             }
+
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
                     .REQUEST_OBJECT_ENABLED)) != null) {
                 if (Boolean.FALSE.toString().equals(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
@@ -4121,6 +4140,14 @@ public class OAuthServerConfiguration {
         return isFapiSecurity;
     }
 
+    /**
+     * This method returns the FAPI version supported by the server configured in identity.xml.
+     */
+    public String getFapiVersion() {
+
+        return fapiVersion;
+    }
+
     public boolean isGlobalRbacScopeIssuerEnabled() {
 
         return globalRbacScopeIssuerEnabled;
@@ -4297,6 +4324,7 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES =
                 "UserInfoRemoveInternalPrefixFromRoles";
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
+        public static final String OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER = "UseEntityIdAsIssuer";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
@@ -4499,6 +4527,7 @@ public class OAuthServerConfiguration {
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";
+        private static final String FAPI_VERSION = "FAPIVersion";
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";

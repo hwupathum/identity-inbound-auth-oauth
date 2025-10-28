@@ -369,23 +369,6 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         }
 
         boolean matchWithoutEnforcingLiteralCharacters = callbackURI.matches(regexp);
-        if (LoggerUtils.isDiagnosticLogsEnabled() && matchWithoutEnforcingLiteralCharacters &&
-                !matchWithEnforcedLiteralCharacters) {
-            String[] callbackURIs = regexp.split("\\|");
-            if (regexp.startsWith("(") && regexp.endsWith(")")) {
-                callbackURIs = regexp.substring(1, regexp.length() - 1).split("\\|");
-            }
-            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(OAUTH_INBOUND_SERVICE,
-                    VALIDATE_INPUT_PARAMS)
-                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oauthApp.getOauthConsumerKey())
-                    .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, callbackURI)
-                    .configParam(LogConstants.InputKeys.APPLICATION_NAME, oauthApp.getApplicationName())
-                    .configParam(OAuthConstants.LogConstants.ConfigKeys.CALLBACK_URI, callbackURIs)
-                    .resultMessage("Provided callback URI does not match when the characters (., +, ?) " +
-                            "are treated as literals in configured callback URI(s) of the application.")
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
-                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
-        }
 
         return matchWithoutEnforcingLiteralCharacters;
     }

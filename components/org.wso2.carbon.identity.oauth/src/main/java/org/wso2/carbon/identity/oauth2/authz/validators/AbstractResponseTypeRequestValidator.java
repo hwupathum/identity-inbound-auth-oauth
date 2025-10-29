@@ -350,6 +350,34 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             registeredCallbackUrl =
                     registeredCallbackUrl.replaceFirst(OAuthConstants.LOOPBACK_IP_PORT_REGEX, StringUtils.EMPTY);
         }
-        return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+
+        if (regexp == null) {
+            return registeredCallbackUrl.equals(callbackURI);
+        }
+
+        if (isLiteralCharactersEnforcedInCallback()) {
+            /*
+            Escape (.), (+), (?) only when followed by a letter/digit (so .com, .org, etc. get escaped),
+            but don't touch .* or .+ or .{n} .
+            */
+            String escapedSpecialCharRegexp = regexp
+                    .replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.")
+                    .replaceAll("(?<!\\\\)\\+(?=[A-Za-z0-9])", "\\\\+")
+                    .replaceAll("(?<!\\\\)\\?(?=[A-Za-z0-9])", "\\\\?");
+            return callbackURI.matches(escapedSpecialCharRegexp);;
+        }
+
+        return callbackURI.matches(regexp);
+    }
+
+    private boolean isLiteralCharactersEnforcedInCallback() {
+
+        String enforceLiteralCharactersInCallbackValue = IdentityUtil.getProperty(
+                "OAuth.Callback.EnforceLiteralCharacters");
+        if (StringUtils.isBlank(enforceLiteralCharactersInCallbackValue)) {
+            return true;
+        }
+
+        return Boolean.parseBoolean(enforceLiteralCharactersInCallbackValue);
     }
 }

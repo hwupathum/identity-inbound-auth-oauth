@@ -75,7 +75,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
-import static org.wso2.carbon.identity.oauth2.OAuth2Constants.IMPERSONATED_REFRESH_TOKEN_ENABLE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT;
 
@@ -430,7 +429,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
 
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
-        return createResponseWithTokenBean(tokReqMsgCtx, existingTokenBean, expireTime, scope);
+        return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
     }
 
     private OAuth2AccessTokenRespDTO generateNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
@@ -461,7 +460,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         // Update cache with newly added token.
         updateCacheIfEnabled(newTokenBean, OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()), oauthTokenIssuer);
-        return createResponseWithTokenBean(tokReqMsgCtx, newTokenBean, validityPeriodInMillis, scope);
+        return createResponseWithTokenBean(newTokenBean, validityPeriodInMillis, scope);
     }
 
     private boolean isExistingTokenValid(AccessTokenDO existingTokenBean, long expireTime) {
@@ -738,8 +737,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
     }
 
-    private OAuth2AccessTokenRespDTO createResponseWithTokenBean(OAuthTokenReqMessageContext tokenReqMessageContext,
-                                                                 AccessTokenDO existingAccessTokenDO,
+    private OAuth2AccessTokenRespDTO createResponseWithTokenBean(AccessTokenDO existingAccessTokenDO,
                                                                  long expireTimeMillis, String scope)
             throws IdentityOAuth2Exception {
 
@@ -763,10 +761,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 supportedGrantTypes = Arrays.asList(grantTypes.split(" "));
             }
             if (supportedGrantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN)) {
-                if (!tokenReqMessageContext.isImpersonationRequest()
-                        || Boolean.parseBoolean(IdentityUtil.getProperty(IMPERSONATED_REFRESH_TOKEN_ENABLE))) {
-                    tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
-                }
+                tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Refresh grant is not allowed for client_id : " + consumerKey + ", therefore not " +

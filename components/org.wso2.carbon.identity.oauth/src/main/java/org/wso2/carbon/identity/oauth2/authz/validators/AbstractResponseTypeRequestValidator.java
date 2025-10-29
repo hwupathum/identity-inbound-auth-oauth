@@ -355,22 +355,19 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             return registeredCallbackUrl.equals(callbackURI);
         }
 
-        /*
-        Escape (.), (+), (?) only when followed by a letter/digit (so .com, .org, etc. get escaped),
-        but don't touch .* or .+ or .{n} .
-         */
-        String escapedSpecialCharRegexp = regexp
-                .replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.")
-                .replaceAll("(?<!\\\\)\\+(?=[A-Za-z0-9])", "\\\\+")
-                .replaceAll("(?<!\\\\)\\?(?=[A-Za-z0-9])", "\\\\?");
-        boolean matchWithEnforcedLiteralCharacters = callbackURI.matches(escapedSpecialCharRegexp);
         if (isLiteralCharactersEnforcedInCallback()) {
-            return matchWithEnforcedLiteralCharacters;
+            /*
+            Escape (.), (+), (?) only when followed by a letter/digit (so .com, .org, etc. get escaped),
+            but don't touch .* or .+ or .{n} .
+            */
+            String escapedSpecialCharRegexp = regexp
+                    .replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.")
+                    .replaceAll("(?<!\\\\)\\+(?=[A-Za-z0-9])", "\\\\+")
+                    .replaceAll("(?<!\\\\)\\?(?=[A-Za-z0-9])", "\\\\?");
+            return callbackURI.matches(escapedSpecialCharRegexp);;
         }
 
-        boolean matchWithoutEnforcingLiteralCharacters = callbackURI.matches(regexp);
-
-        return matchWithoutEnforcingLiteralCharacters;
+        return callbackURI.matches(regexp);
     }
 
     private boolean isLiteralCharactersEnforcedInCallback() {

@@ -295,6 +295,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (sessionId != null) {
             tokReqMsgCtx.addProperty(SESSION_IDENTIFIER, sessionId);
         }
+
+        // Set impersonation property if the refresh token was issued for an impersonation request.
+        String impersonatingActorId = getImpersonatingActorId(validationBean.getAccessToken());
+        if (StringUtils.isNotBlank(impersonatingActorId)) {
+            tokReqMsgCtx.addProperty(OAuthConstants.IMPERSONATING_ACTOR, impersonatingActorId);
+            tokReqMsgCtx.setImpersonationRequest(true);
+        }
     }
 
     /**
@@ -320,6 +327,46 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
         return sessionContextIdentifier;
+    }
+
+    /**
+     * Return impersonating actor id from authorization grant cache. For authorization code flow, we mapped it
+     * against auth_code. For refresh token grant, we map the cache against the access token.
+     *
+     * @param tokenKey Authorization code or access token.
+     * @return Impersonating actor id.
+     */
+    private static String getImpersonatingActorId(String tokenKey) {
+
+        if (StringUtils.isBlank(tokenKey)) {
+            log.debug("Token key is blank. Skipping impersonator lookup.");
+            return null;
+        }
+
+        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(tokenKey);
+        AuthorizationGrantCacheEntry cacheEntry =
+                AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+
+        if (cacheEntry == null) {
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("No cache entry found for token access token(hashed):" +
+                            DigestUtils.sha256Hex(tokenKey));
+                } else {
+                    log.debug("No cache entry found for token access token");
+                }
+            }
+            return null;
+        }
+
+        String impersonator = cacheEntry.getImpersonator();
+        if (log.isDebugEnabled()) {
+            if (impersonator != null) {
+                log.debug(String.format("Found impersonating actor ID: %s ", impersonator));
+            }
+        }
+
+        return impersonator;
     }
 
     private boolean validateRefreshTokenInRequest(OAuth2AccessTokenReqDTO tokenReq,

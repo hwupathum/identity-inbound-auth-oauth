@@ -91,6 +91,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private Map<String, Object> customClaims;
 
     private boolean isPreIssueAccessTokenActionsExecuted;
+    private String impersonator;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -402,5 +403,15 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
             Map<ClaimMapping, String> mappedRemoteClaims) {
 
         this.mappedRemoteClaims = mappedRemoteClaims;
+    }
+
+    public String getImpersonator() {
+
+        return impersonator;
+    }
+
+    public void setImpersonator(String impersonator) {
+
+        this.impersonator = impersonator;
     }
 }

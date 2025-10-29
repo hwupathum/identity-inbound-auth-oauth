@@ -652,6 +652,9 @@ public class AccessTokenIssuer {
             addUserAttributesAgainstAccessTokenForPasswordGrant(tokenRespDTO, tokReqMsgCtx);
         }
 
+        // Add an entry to the Authorization Grant Cache for impersonated tokens.
+        addAuthorizationGrantCacheEntryForImpersonatedToken(tokenRespDTO, tokReqMsgCtx);
+
         persistCustomizedAccessTokenAttributesForRefreshToken(tokenRespDTO, tokReqMsgCtx);
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
@@ -660,6 +663,88 @@ public class AccessTokenIssuer {
         }
 
         return tokenRespDTO;
+    }
+
+    /**
+     * Adds an entry to the Authorization Grant Cache for impersonated tokens.
+     *
+     * @param tokenRespDTO OAuth2 access token response DTO.
+     * @param tokReqMsgCtx OAuth token request message context.
+     */
+    private void addAuthorizationGrantCacheEntryForImpersonatedToken(OAuth2AccessTokenRespDTO tokenRespDTO,
+                                                                     OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        // Early exit if impersonation does not apply.
+        if (!tokReqMsgCtx.isImpersonationRequest()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Not an impersonation request. Skipping cache entry creation.");
+            }
+            return;
+        }
+
+        Object impersonatingActorObj = tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR);
+        if (impersonatingActorObj == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Impersonating actor property not found in token request context. Skipping cache update.");
+            }
+            return;
+        }
+
+        String accessToken = tokenRespDTO.getAccessToken();
+        String tokenId = tokenRespDTO.getTokenId();
+
+        if (StringUtils.isBlank(accessToken) || StringUtils.isBlank(tokenId)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Access token or token ID is blank. Cannot create cache entry for impersonation.");
+            }
+            return;
+        }
+
+        AuthorizationGrantCache cache = AuthorizationGrantCache.getInstance();
+        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+
+        // Skip adding if entry already exists (e.g., refresh token scenario)
+        AuthorizationGrantCacheEntry existingEntry = cache.getValueFromCache(cacheKey);
+        if (existingEntry != null) {
+            logCachePresenceForImpersonation(cacheKey, true);
+            return;
+        }
+
+        // Create a new cache entry for the impersonated token.
+        AuthorizationGrantCacheEntry newEntry =
+                new AuthorizationGrantCacheEntry(tokReqMsgCtx.getAuthorizedUser().getUserAttributes());
+        newEntry.setTokenId(tokenId);
+        newEntry.setImpersonator(impersonatingActorObj.toString());
+
+        // Set validity period to match refresh token lifetime.
+        newEntry.setValidityPeriod(
+                TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis()));
+
+        // Log and add to cache.
+        logCachePresenceForImpersonation(cacheKey, false);
+        cache.addToCacheByToken(cacheKey, newEntry);
+    }
+
+    /**
+     * Logs the cache operation for impersonated access tokens.
+     */
+    private void logCachePresenceForImpersonation(AuthorizationGrantCacheKey cacheKey, boolean alreadyExists) {
+
+        if (!log.isDebugEnabled()) {
+            return;
+        }
+
+        boolean isTokenLoggable = IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN);
+        String messagePrefix = alreadyExists ?
+                "AuthorizationGrantCache entry already exists for the impersonated access token" :
+                "Adding AuthorizationGrantCache entry for the impersonated access token";
+
+        if (isTokenLoggable) {
+            log.debug(String.format("%s (hashed): %s",
+                    messagePrefix, DigestUtils.sha256Hex(cacheKey.getUserAttributesId())));
+        } else {
+            log.debug(messagePrefix);
+        }
     }
 
     private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromDeviceCode(String deviceCode) {

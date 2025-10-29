@@ -295,6 +295,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (sessionId != null) {
             tokReqMsgCtx.addProperty(SESSION_IDENTIFIER, sessionId);
         }
+
+        // Set impersonation property if the refresh token was issued for an impersonation request.
+        String impersonatingActorId = getImpersonatingActorId(validationBean.getAccessToken());
+        if (StringUtils.isNotBlank(impersonatingActorId)) {
+            tokReqMsgCtx.addProperty(OAuthConstants.IMPERSONATING_ACTOR, impersonatingActorId);
+            tokReqMsgCtx.setImpersonationRequest(true);
+        }
     }
 
     /**
@@ -320,6 +327,46 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
         return sessionContextIdentifier;
+    }
+
+    /**
+     * Return impersonating actor id from authorization grant cache. For authorization code flow, we mapped it
+     * against auth_code. For refresh token grant, we map the cache against the access token.
+     *
+     * @param tokenKey Authorization code or access token.
+     * @return Impersonating actor id.
+     */
+    private static String getImpersonatingActorId(String tokenKey) {
+
+        if (StringUtils.isBlank(tokenKey)) {
+            log.debug("Token key is blank. Skipping impersonator lookup.");
+            return null;
+        }
+
+        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(tokenKey);
+        AuthorizationGrantCacheEntry cacheEntry =
+                AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+
+        if (cacheEntry == null) {
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("No cache entry found for token access token(hashed):" +
+                            DigestUtils.sha256Hex(tokenKey));
+                } else {
+                    log.debug("No cache entry found for token access token");
+                }
+            }
+            return null;
+        }
+
+        String impersonator = cacheEntry.getImpersonator();
+        if (log.isDebugEnabled()) {
+            if (impersonator != null) {
+                log.debug(String.format("Found impersonating actor ID: %s ", impersonator));
+            }
+        }
+
+        return impersonator;
     }
 
     private boolean validateRefreshTokenInRequest(OAuth2AccessTokenReqDTO tokenReq,
@@ -445,11 +492,20 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokenResp.setAccessToken(accessTokenBean.getAccessToken());
         tokenResp.setTokenId(accessTokenBean.getTokenId());
         tokenResp.setRefreshToken(accessTokenBean.getRefreshToken());
-        if (accessTokenBean.getValidityPeriodInMillis() > 0) {
+        long expireTimeMillis = accessTokenBean.getValidityPeriodInMillis();
+        if (expireTimeMillis > 0) {
             tokenResp.setExpiresIn(accessTokenBean.getValidityPeriod());
-            tokenResp.setExpiresInMillis(accessTokenBean.getValidityPeriodInMillis());
+            tokenResp.setExpiresInMillis(expireTimeMillis);
         } else {
             tokenResp.setExpiresIn(Long.MAX_VALUE);
+            tokenResp.setExpiresInMillis(Long.MAX_VALUE);
+        }
+        long refreshTokenExpiresInMillis = accessTokenBean.getRefreshTokenValidityPeriodInMillis();
+        if (refreshTokenExpiresInMillis > 0) {
+            tokenResp.setRefreshTokenExpiresInMillis(refreshTokenExpiresInMillis);
+        } else if (expireTimeMillis > 0) {
+            tokenResp.setRefreshTokenExpiresInMillis(expireTimeMillis);
+        } else {
             tokenResp.setExpiresInMillis(Long.MAX_VALUE);
         }
         tokenResp.setAuthorizedScopes(scope);
@@ -840,8 +896,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 grantCacheEntry.setTokenId(null);
             }
 
+            // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
             grantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getValidityPeriodInMillis()));
+                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getRefreshTokenValidityPeriodInMillis()));
 
             // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,

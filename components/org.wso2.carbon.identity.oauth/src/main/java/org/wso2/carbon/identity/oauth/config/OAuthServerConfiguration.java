@@ -214,6 +214,7 @@ public class OAuthServerConfiguration {
     private String[] supportedClaims = null;
     private boolean isFapiCiba = false;
     private boolean isFapiSecurity = false;
+    private String fapiVersion = OAuthConstants.FAPIVersions.FAPI1_ADVANCED;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
@@ -234,6 +235,7 @@ public class OAuthServerConfiguration {
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private boolean userInfoMultiValueSupportEnabled = true;
     private boolean userInfoRemoveInternalPrefixFromRoles = false;
+    private boolean removeInternalPrefixFromMappedRolesAttributeInToken = false;
 
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
@@ -241,6 +243,7 @@ public class OAuthServerConfiguration {
     private boolean addTenantDomainToIdTokenEnabled = false;
     private boolean addUserstoreDomainToIdTokenEnabled = false;
     private boolean requestObjectEnabled = true;
+    private boolean useEntityIDAsIssuer = false;
 
     //default token types
     public static final String DEFAULT_TOKEN_TYPE = "Default";
@@ -580,6 +583,9 @@ public class OAuthServerConfiguration {
 
         // Read config for restricted query parameters in oauth requests
         parseRestrictedQueryParameters(oauthElem);
+
+        // Read config for removing internal prefix from mapped roles attribute in JWT tokens.
+        parseRemoveInternalPrefixFromMappedRolesAttributeInToken(oauthElem);
     }
 
     /**
@@ -1653,6 +1659,10 @@ public class OAuthServerConfiguration {
 
     public String getUserInfoJWTSignatureAlgorithm() {
         return userInfoJWTSignatureAlgorithm;
+    }
+
+    public boolean getIsUseEntityIDAsIssuerEnabled() {
+        return useEntityIDAsIssuer;
     }
 
     /**
@@ -3640,6 +3650,14 @@ public class OAuthServerConfiguration {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
                         getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)).getText().trim());
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)) != null) {
+                useEntityIDAsIssuer = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)).
+                        getText().trim());
+            }
+
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS)) != null) {
                 String supportedClaimStr = openIDConnectConfigElem
@@ -3708,7 +3726,12 @@ public class OAuthServerConfiguration {
                             Boolean.parseBoolean(fapiElem.getFirstChildWithName(getQNameWithIdentityNS
                                     (ConfigElements.ENABLE_FAPI_SECURITY_PROFILE)).getText().trim());
                 }
+                if (fapiElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.FAPI_VERSION)) != null) {
+                    fapiVersion = fapiElem.getFirstChildWithName(getQNameWithIdentityNS(
+                            ConfigElements.FAPI_VERSION)).getText().trim();
+                }
             }
+
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
                     .REQUEST_OBJECT_ENABLED)) != null) {
                 if (Boolean.FALSE.toString().equals(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
@@ -4067,6 +4090,32 @@ public class OAuthServerConfiguration {
         return useLegacyPermissionAccessForUserBasedAuth;
     }
 
+    /**
+     * Returns whether Internal prefix should be removed from mapped attribute to local role claim in JWT tokens.
+     *
+     * @return True if Internal prefix should be removed from mapped attribute to local role claim in JWT tokens.
+     */
+    public boolean isRemoveInternalPrefixFromMappedRolesAttributeInTokenEnabled() {
+
+        return removeInternalPrefixFromMappedRolesAttributeInToken;
+    }
+
+    /**
+     * Parse the removeInternalPrefixFromMappedRolesAttributeInToken configuration that used to remove Internal
+     * prefix from mapped attribute to local role claim in JWT tokens.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseRemoveInternalPrefixFromMappedRolesAttributeInToken(OMElement oauthConfigElem) {
+
+        OMElement removeInternalPrefixFromMappedRolesAttributeInTokenElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.REMOVE_INTERNAL_PREFIX_FROM_MAPPED_ROLES_ATTRIBUTE));
+        if (removeInternalPrefixFromMappedRolesAttributeInTokenElem != null) {
+            removeInternalPrefixFromMappedRolesAttributeInToken =
+                    Boolean.parseBoolean(removeInternalPrefixFromMappedRolesAttributeInTokenElem.getText());
+        }
+    }
+
     private static void setOAuthResponseJspPageAvailable() {
 
         java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
@@ -4089,6 +4138,14 @@ public class OAuthServerConfiguration {
      */
     public boolean isFapiSecurity() {
         return isFapiSecurity;
+    }
+
+    /**
+     * This method returns the FAPI version supported by the server configured in identity.xml.
+     */
+    public String getFapiVersion() {
+
+        return fapiVersion;
     }
 
     public boolean isGlobalRbacScopeIssuerEnabled() {
@@ -4267,6 +4324,7 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES =
                 "UserInfoRemoveInternalPrefixFromRoles";
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
+        public static final String OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER = "UseEntityIdAsIssuer";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
@@ -4469,6 +4527,7 @@ public class OAuthServerConfiguration {
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";
+        private static final String FAPI_VERSION = "FAPIVersion";
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
@@ -4482,6 +4541,8 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
+        private static final String REMOVE_INTERNAL_PREFIX_FROM_MAPPED_ROLES_ATTRIBUTE =
+                "RemoveInternalPrefixFromMappedRolesAttributeInToken";
     }
 
 }

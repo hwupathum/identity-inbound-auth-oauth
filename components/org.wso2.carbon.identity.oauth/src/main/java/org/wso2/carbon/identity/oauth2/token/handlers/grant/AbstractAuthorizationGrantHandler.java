@@ -839,6 +839,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private OAuth2AccessTokenRespDTO createResponseWithTokenBean(AccessTokenDO existingAccessTokenDO,
                                                                  long expireTimeMillis, String scope)
             throws IdentityOAuth2Exception {
+
         OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
         tokenRespDTO.setAccessToken(existingAccessTokenDO.getAccessToken());
         tokenRespDTO.setTokenId(existingAccessTokenDO.getTokenId());
@@ -887,6 +888,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             tokenRespDTO.setExpiresInMillis(expireTimeMillis);
         } else {
             tokenRespDTO.setExpiresIn(Long.MAX_VALUE / SECONDS_TO_MILISECONDS_FACTOR);
+            tokenRespDTO.setExpiresInMillis(Long.MAX_VALUE);
+        }
+        long refreshTokenExpiresInMillis = existingAccessTokenDO.getRefreshTokenValidityPeriodInMillis();
+        if (refreshTokenExpiresInMillis > 0) {
+            tokenRespDTO.setRefreshTokenExpiresInMillis(refreshTokenExpiresInMillis);
+        } else if (expireTimeMillis > 0) {
+            tokenRespDTO.setRefreshTokenExpiresInMillis(expireTimeMillis);
+        } else {
             tokenRespDTO.setExpiresInMillis(Long.MAX_VALUE);
         }
         tokenRespDTO.setAuthorizedScopes(scope);

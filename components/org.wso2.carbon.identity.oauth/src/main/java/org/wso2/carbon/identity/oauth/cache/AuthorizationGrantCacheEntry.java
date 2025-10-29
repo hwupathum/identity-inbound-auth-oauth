@@ -80,6 +80,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private boolean isRequestObjectFlow;
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
     private boolean isApiBasedAuthRequest;
+    private String impersonator;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -336,5 +337,16 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setApiBasedAuthRequest(boolean apiBasedAuthRequest) {
 
         isApiBasedAuthRequest = apiBasedAuthRequest;
+    }
+
+
+    public String getImpersonator() {
+
+        return impersonator;
+    }
+
+    public void setImpersonator(String impersonator) {
+
+        this.impersonator = impersonator;
     }
 }

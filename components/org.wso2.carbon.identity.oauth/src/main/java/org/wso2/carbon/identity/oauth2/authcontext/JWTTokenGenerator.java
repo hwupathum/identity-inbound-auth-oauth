@@ -181,6 +181,11 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         boolean isExistingUser = false;
         String tenantAwareUsername = null;
 
+        if (authzUser == null) {
+            log.error("Authorized user not found in the token validation response.");
+            return;
+        }
+
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
         tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(authzUser);
 
@@ -240,7 +245,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             }
 
             ClaimCacheKey cacheKey = null;
-            UserClaims result = null;
+            UserClaims userClaimsFromCache = null;
 
             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
             authenticatedUser.setUserName(UserCoreUtil.removeDomainFromName(tenantAwareUsername));
@@ -249,16 +254,18 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
             if (requestedClaims != null && requestedClaims.length > 0) {
                 cacheKey = new ClaimCacheKey(authenticatedUser);
-                result = claimsLocalCache.getValueFromCache(cacheKey, tenantDomain);
+                userClaimsFromCache = claimsLocalCache.getValueFromCache(cacheKey, tenantDomain);
             }
 
             SortedMap<String, String> claimValues = null;
-            if (result != null) {
-                claimValues = getClaimsFromCache(authenticatedUser, cacheKey, tenantDomain, authzUser,
-                        requestedClaims, result, isExistingUser);
+            if (userClaimsFromCache != null) {
+                // Retain only requested claims from the cache; fetch any requested claims missing from the cache
+                // using claimsRetriever and update the cache with newly obtained values.
+                claimValues = filterClaimsFromCache(authenticatedUser, cacheKey, tenantDomain, authzUser,
+                        requestedClaims, userClaimsFromCache, isExistingUser);
             } else if (isExistingUser) {
                 claimValues = claimsRetriever.getClaims(authzUser, requestedClaims);
-
+                updateClaimCache(authenticatedUser, claimValues, cacheKey, tenantDomain);
             }
 
             if (isExistingUser) {
@@ -305,10 +312,10 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         messageContext.getResponseDTO().setAuthorizationContextToken(token);
     }
 
-    private SortedMap<String, String> getClaimsFromCache(AuthenticatedUser authenticatedUser, ClaimCacheKey cacheKey,
-                                                         String tenantDomain, String authzUser,
-                                                         String[] requestedClaims,
-                                                         UserClaims userClaimsCache, boolean isExistingUser)
+    private SortedMap<String, String> filterClaimsFromCache(AuthenticatedUser authenticatedUser, ClaimCacheKey cacheKey,
+                                                            String tenantDomain, String authzUser,
+                                                            String[] requestedClaims,
+                                                            UserClaims userClaimsCache, boolean isExistingUser)
             throws IdentityOAuth2Exception {
 
         SortedMap<String, String> cachedClaims = userClaimsCache.getClaimValues();

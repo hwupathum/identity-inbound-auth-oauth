@@ -18,6 +18,8 @@
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -38,20 +40,24 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
         Map<String, Object> claims = new HashMap<String, Object>();
         if (MapUtils.isNotEmpty(userAttributes)) {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
-                if (IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(entry.getKey().getRemoteClaim()
-                        .getClaimUri())) {
+                Claim remoteClaim = entry.getKey().getRemoteClaim();
+                if (remoteClaim == null ||
+                        IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(remoteClaim.getClaimUri())) {
                     continue;
                 }
                 String claimValue = entry.getValue();
-                String claimUri = entry.getKey().getRemoteClaim().getClaimUri();
+                String claimUri = remoteClaim.getClaimUri();
+                if (StringUtils.isBlank(claimUri)) {
+                    continue;
+                }
                 boolean isMultiValueSupportEnabledForUserinfoResponse = OAuthServerConfiguration.getInstance()
                         .getUserInfoMultiValueSupportEnabled();
                 if (isMultiValueSupportEnabledForUserinfoResponse &&
                         ClaimUtil.isMultiValuedAttribute(claimUri, claimValue)) {
                     String[] attributeValues = ClaimUtil.processMultiValuedAttribute(claimValue);
-                    claims.put(entry.getKey().getRemoteClaim().getClaimUri(), attributeValues);
+                    claims.put(claimUri, attributeValues);
                 } else {
-                    claims.put(entry.getKey().getRemoteClaim().getClaimUri(), claimValue);
+                    claims.put(claimUri, claimValue);
                 }
             }
         }

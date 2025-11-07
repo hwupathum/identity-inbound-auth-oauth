@@ -364,7 +364,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                     .replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.")
                     .replaceAll("(?<!\\\\)\\+(?=[A-Za-z0-9])", "\\\\+")
                     .replaceAll("(?<!\\\\)\\?(?=[A-Za-z0-9])", "\\\\?");
-            return callbackURI.matches(escapedSpecialCharRegexp);;
+            return callbackURI.matches(escapedSpecialCharRegexp);
         }
 
         return callbackURI.matches(regexp);

@@ -102,6 +102,7 @@ public class DefaultOAuth2ScopeValidator {
             String orgId = authzReqMessageContext.getAuthorizationReqDTO().getUser().getAccessingOrganization();
             String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
+            tenantDomain = getTenantDomainByOrgId(orgId);
         }
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
                         .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
@@ -140,6 +141,7 @@ public class DefaultOAuth2ScopeValidator {
             String orgId = tokenReqMessageContext.getAuthorizedUser().getAccessingOrganization();
             String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
+            tenantDomain = getTenantDomainByOrgId(orgId);
         }
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
         String userType = tokenReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE).toString();
@@ -152,6 +154,16 @@ public class DefaultOAuth2ScopeValidator {
             authorizedScopes.remove(OPENID_SCOPE);
         }
         return authorizedScopes;
+    }
+
+    private String getTenantDomainByOrgId(String orgId) throws IdentityOAuth2Exception {
+
+        try {
+            return  OAuthComponentServiceHolder.getInstance().getOrganizationManager().resolveTenantDomain(orgId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain for organization: "
+                    + orgId, e);
+        }
     }
 
     /**

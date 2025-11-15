@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.action.execution.api.model.ActionType;
 import org.wso2.carbon.identity.action.execution.api.model.Error;
 import org.wso2.carbon.identity.action.execution.api.model.Failure;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
@@ -40,6 +41,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -56,10 +58,12 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
@@ -118,7 +122,21 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 .validateRefreshToken(tokReqMsgCtx);
 
         validateRefreshTokenInRequest(tokenReq, validationBean);
-        validateTokenBindingReference(tokenReq, validationBean);
+
+        TokenBinding tokenBinding = null;
+        if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !NONE
+                .equals(validationBean.getTokenBindingReference())) {
+            Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
+                    .getTokenBindingMgtDAO()
+                    .getTokenBindingByBindingRef(validationBean.getTokenId(),
+                            validationBean.getTokenBindingReference());
+            if (tokenBindingOptional.isPresent()) {
+                tokenBinding = tokenBindingOptional.get();
+                tokReqMsgCtx.setTokenBinding(tokenBinding);
+            }
+        }
+
+        validateTokenBindingReference(tokenReq, validationBean, tokenBinding);
         validateAuthenticatedUser(validationBean, tokReqMsgCtx);
 
         if (log.isDebugEnabled()) {
@@ -267,14 +285,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(validationBean.getScope());
         tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                 validationBean.getAccessTokenExtendedAttributes());
-        if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !NONE
-                .equals(validationBean.getTokenBindingReference())) {
-            Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
-                    .getTokenBindingMgtDAO()
-                    .getTokenBindingByBindingRef(validationBean.getTokenId(),
-                            validationBean.getTokenBindingReference());
-            tokenBindingOptional.ifPresent(tokReqMsgCtx::setTokenBinding);
-        }
         // Store the old access token as a OAuthTokenReqMessageContext property, this is already
         // a preprocessed token.
         tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
@@ -989,11 +999,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private void validateTokenBindingReference(OAuth2AccessTokenReqDTO tokenReqDTO,
-                                               RefreshTokenValidationDataDO validationDataDO)
+                                               RefreshTokenValidationDataDO validationDataDO,
+                                               TokenBinding tokenBinding)
             throws IdentityOAuth2Exception {
 
-        if (StringUtils.isBlank(validationDataDO.getTokenBindingReference()) || NONE
-                .equals(validationDataDO.getTokenBindingReference())) {
+        if (tokenBinding == null) {
             return;
         }
 
@@ -1007,6 +1017,21 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
             return;
+        }
+
+        // Validate SSO session bound token.
+        if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(oAuthAppDO.getTokenBindingType())) {
+            if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled()
+                    || (oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()
+                    && !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry())) {
+                if (!isTokenBoundToActiveSSOSession(tokenBinding.getBindingValue(),
+                        validationDataDO.getAuthorizedUser())) {
+                    // Revoke the SSO session bound access token if the session is invalid/terminated.
+                    revokeSSOSessionBoundToken(validationDataDO.getAccessToken());
+                    throw new IdentityOAuth2Exception("Token binding validation failed. Token is not bound to an " +
+                            "active SSO session.");
+                }
+            }
         }
 
         Optional<TokenBinder> tokenBinderOptional = OAuth2ServiceComponentHolder.getInstance()
@@ -1059,5 +1084,52 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         oAuthTokenReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
                 .getTrimmedAuthorizationDetails(tokenAuthorizationDetails));
+    }
+
+    /**
+     * Check whether the SSO-session-bound access token is still tied to an active SSO session.
+     *
+     * @param sessionIdentifier     Session identifier.
+     * @param authenticatedUser     Authenticated user.
+     * @return True if the token is bound to an active SSO session, false otherwise.
+     */
+    private boolean isTokenBoundToActiveSSOSession(String sessionIdentifier, AuthenticatedUser authenticatedUser) {
+
+        SessionContext sessionContext =
+                FrameworkUtils.getSessionContextFromCache(sessionIdentifier, authenticatedUser.getTenantDomain());
+        if (sessionContext == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Session context is not found corresponding to the session identifier: " +
+                        sessionIdentifier);
+            }
+            return false;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("SSO session validation successful for the given session identifier: " + sessionIdentifier);
+        }
+        return true;
+    }
+
+    /**
+     * Revoke the SSO session bound access token if the associated session is terminated.
+     * This is only applicable for the applications that have enabled 'revokeTokensWhenIdPSessionTerminated'.
+     *
+     * @param accessTokenIdentifier Access token identifier.
+     */
+    private void revokeSSOSessionBoundToken(String accessTokenIdentifier) {
+
+        try {
+            AccessTokenDO accessTokenDO =
+                    OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessTokenIdentifier, true);
+            OAuthUtil.clearOAuthCache(accessTokenDO);
+            OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
+            revokeRequestDTO.setConsumerKey(accessTokenDO.getConsumerKey());
+            revokeRequestDTO.setToken(accessTokenDO.getAccessToken());
+            OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor()
+                    .revokeAccessToken(revokeRequestDTO, accessTokenDO);
+        } catch (IdentityOAuth2Exception | UserIdNotFoundException e) {
+            log.error("Error while revoking SSO session bound access token.", e);
+        }
     }
 }

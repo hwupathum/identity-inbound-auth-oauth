@@ -30,7 +30,8 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.Payload;
-import com.nimbusds.jose.crypto.RSAEncrypter;
+import com.nimbusds.jose.Requirement;
+import com.nimbusds.jose.crypto.ECDHEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWK;
@@ -122,6 +123,7 @@ import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
+import org.wso2.carbon.identity.oauth2.crypto.JWEEncryptor;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
@@ -177,6 +179,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
@@ -2557,8 +2560,7 @@ public class OAuth2Util {
         if (jweAlgorithm.getRequirement() != null) {
             return jweAlgorithm;
         } else {
-            throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm);
-        }
+            return new com.nimbusds.jose.JWEAlgorithm("RSA-OAEP-512", Requirement.OPTIONAL);        }
     }
 
     /**
@@ -2798,7 +2800,8 @@ public class OAuth2Util {
             }
             SignedJWT signedJwt = (SignedJWT) OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain);
             return encryptWithRSA(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
-        } else {
+        }
+        else {
             throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
                     " is not supported");
         }
@@ -3086,7 +3089,7 @@ public class OAuth2Util {
                         encryptionMethod + ", tenant: " + spTenantDomain + " & header: " + header.toString());
             }
 
-            JWEEncrypter encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
+            JWEEncrypter encrypter = new JWEEncryptor((RSAPublicKey) publicKey);
             encryptedJWT.encrypt(encrypter);
             return encryptedJWT;
         } catch (JOSEException e) {
@@ -3123,7 +3126,11 @@ public class OAuth2Util {
 
             JWEObject jweObject = new JWEObject(header, new Payload(signedJwt));
             // Encrypt with the recipient's public key.
-            jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
+            if (encryptionAlgorithm.getName().startsWith("RSA")) {
+                jweObject.encrypt(new JWEEncryptor((RSAPublicKey) publicKey));
+            } else if (encryptionAlgorithm.getName().startsWith("ECDH-ES")) {
+                jweObject.encrypt(new ECDHEncrypter((ECPublicKey) publicKey));
+            }
 
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(jweObject.serialize());
 
@@ -3407,7 +3414,8 @@ public class OAuth2Util {
     private static boolean isRSAAlgorithm(JWEAlgorithm algorithm) {
 
         return (JWEAlgorithm.RSA_OAEP.equals(algorithm) || JWEAlgorithm.RSA1_5.equals(algorithm) ||
-                JWEAlgorithm.RSA_OAEP_256.equals(algorithm));
+                JWEAlgorithm.RSA_OAEP_256.equals(algorithm) || JWEAlgorithm.ECDH_ES_A256KW.equals(algorithm) ||
+                new JWEAlgorithm("RSA-OAEP-512", Requirement.OPTIONAL).equals(algorithm) );
     }
 
     /**

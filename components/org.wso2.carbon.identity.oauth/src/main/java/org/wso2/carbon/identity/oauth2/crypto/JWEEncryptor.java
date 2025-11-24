@@ -61,6 +61,12 @@ public class JWEEncryptor extends RSAEncrypter {
             cek = ContentCryptoProvider.generateCEK(enc, getJCAContext().getSecureRandom());
         }
 
+        // For algorithms not 384 / 512
+        if (!alg.equals(JWEAlgorithm.RSA_OAEP_384) &&
+                !alg.equals(JWEAlgorithm.RSA_OAEP_512)) {
+            return super.encrypt(header, clearText);
+        }
+
         final Base64URL encryptedKey; // The second JWE part
 
         if (alg.equals(JWEAlgorithm.RSA_OAEP_384)) {

@@ -32,6 +32,7 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.Requirement;
 import com.nimbusds.jose.crypto.ECDHEncrypter;
+import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWK;
@@ -2793,15 +2794,30 @@ public class OAuth2Util {
                                  String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
+        if (StringUtils.isBlank(spTenantDomain)) {
+            spTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Assigned super tenant domain as signing domain when encrypting id token " +
+                        "for client_id: %s .", clientId));
+            }
+        }
+        String jwksUri = getSPJwksUrl(clientId, spTenantDomain);
+
         if (isRSAAlgorithm(encryptionAlgorithm)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Signing JWT before encryption using the algorithm: %s ."
                         , signatureAlgorithm));
             }
             SignedJWT signedJwt = (SignedJWT) OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain);
-            return encryptWithRSA(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
-        }
-        else {
+            return encryptWithRSA(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId, jwksUri);
+        } else if (isECDHAlgorithm(encryptionAlgorithm)) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Signing JWT before encryption using the algorithm: %s ."
+                        , signatureAlgorithm));
+            }
+            SignedJWT signedJwt = (SignedJWT) OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain);
+            return encryptWithECDH(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId, jwksUri);
+        } else {
             throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
                     " is not supported");
         }
@@ -2816,7 +2832,8 @@ public class OAuth2Util {
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
-     * @deprecated replaced by {@link #encryptWithRSA(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
+     * @deprecated replaced by {@link #encryptWithRSA(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String,
+     * String)}
      */
     @Deprecated
     private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
@@ -2861,22 +2878,57 @@ public class OAuth2Util {
      * @param encryptionAlgorithm JWT signing algorithm
      * @param spTenantDomain      Service provider tenant domain
      * @param clientId            ID of the client
+     * @param jwksUri             jwksUri of the Service Provider
+     *
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
      */
     private static JWT encryptWithRSA(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
-                                      EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
+                                      EncryptionMethod encryptionMethod, String spTenantDomain, String clientId,
+                                      String jwksUri)
             throws IdentityOAuth2Exception {
 
         try {
-            if (StringUtils.isBlank(spTenantDomain)) {
-                spTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+
+            if (StringUtils.isBlank(jwksUri)) {
                 if (log.isDebugEnabled()) {
-                    log.debug(String.format("Assigned super tenant domain as signing domain when encrypting id token " +
-                            "for client_id: %s .", clientId));
+                    log.debug(String.format("Jwks uri is not configured for the service provider associated with " +
+                            "client_id: %s , Checking for x509 certificate.", clientId));
                 }
+                return encryptUsingSPX509Certificate(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain,
+                        clientId);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Jwks uri is configured for the service provider associated with" +
+                            " client %s from jwks uri %s .", clientId, jwksUri));
+                }
+                return encryptUsingJwksPublicKey(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain,
+                        clientId, jwksUri);
             }
-            String jwksUri = getSPJwksUrl(clientId, spTenantDomain);
+
+        } catch (JOSEException | ParseException e) {
+            throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
+                    + " with the tenant domain: " + spTenantDomain, e);
+        }
+    }
+
+    /**
+     * Encrypt JWT id token using ECDH algorithm.
+     *
+     * @param signedJwt           contains signed JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
+     * @param jwksUri             jwksUri of the Service Provider
+     * @return encrypted JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    private static JWT encryptWithECDH(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
+                                      EncryptionMethod encryptionMethod, String spTenantDomain, String clientId,
+                                       String jwksUri)
+            throws IdentityOAuth2Exception {
+
+        try {
 
             if (StringUtils.isBlank(jwksUri)) {
                 if (log.isDebugEnabled()) {
@@ -3126,9 +3178,14 @@ public class OAuth2Util {
 
             JWEObject jweObject = new JWEObject(header, new Payload(signedJwt));
             // Encrypt with the recipient's public key.
-            if (encryptionAlgorithm.getName().startsWith("RSA")) {
+            if (JWEAlgorithm.RSA_OAEP.equals(encryptionAlgorithm) || JWEAlgorithm.RSA1_5.equals(encryptionAlgorithm)) {
+                jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
+            } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(encryptionAlgorithm) ||
+                    org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(encryptionAlgorithm)) {
                 jweObject.encrypt(new JWEEncryptor((RSAPublicKey) publicKey));
-            } else if (encryptionAlgorithm.getName().startsWith("ECDH-ES")) {
+            } else if (JWEAlgorithm.ECDH_ES_A256KW.equals(encryptionAlgorithm) ||
+                    JWEAlgorithm.ECDH_ES_A192KW.equals(encryptionAlgorithm) ||
+                            JWEAlgorithm.ECDH_ES_A128KW.equals(encryptionAlgorithm)) {
                 jweObject.encrypt(new ECDHEncrypter((ECPublicKey) publicKey));
             }
 
@@ -3414,8 +3471,15 @@ public class OAuth2Util {
     private static boolean isRSAAlgorithm(JWEAlgorithm algorithm) {
 
         return (JWEAlgorithm.RSA_OAEP.equals(algorithm) || JWEAlgorithm.RSA1_5.equals(algorithm) ||
-                JWEAlgorithm.RSA_OAEP_256.equals(algorithm) || JWEAlgorithm.ECDH_ES_A256KW.equals(algorithm) ||
-                new JWEAlgorithm("RSA-OAEP-512", Requirement.OPTIONAL).equals(algorithm) );
+                JWEAlgorithm.RSA_OAEP_256.equals(algorithm) ||
+                new JWEAlgorithm("RSA-OAEP-512", Requirement.OPTIONAL).equals(algorithm)
+                    || new JWEAlgorithm("RSA-OAEP-384", Requirement.OPTIONAL).equals(algorithm));
+    }
+
+    private static boolean isECDHAlgorithm(JWEAlgorithm algorithm) {
+
+        return (JWEAlgorithm.ECDH_ES_A128KW.equals(algorithm) || JWEAlgorithm.ECDH_ES_A192KW.equals(algorithm) ||
+                JWEAlgorithm.ECDH_ES_A256KW.equals(algorithm));
     }
 
     /**

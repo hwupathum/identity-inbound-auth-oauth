@@ -2560,8 +2560,13 @@ public class OAuth2Util {
         // Parse method returns a new JWEAlgorithm with requirement set to null if unknown algorithm name is passed.
         if (jweAlgorithm.getRequirement() != null) {
             return jweAlgorithm;
+        } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(jweAlgorithm)) {
+            return new com.nimbusds.jose.JWEAlgorithm("RSA-OAEP-512", Requirement.OPTIONAL);
+        } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(jweAlgorithm)) {
+            return new com.nimbusds.jose.JWEAlgorithm("RSA-OAEP-384", Requirement.OPTIONAL);
         } else {
-            return new com.nimbusds.jose.JWEAlgorithm("RSA-OAEP-512", Requirement.OPTIONAL);        }
+            throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm);
+        }
     }
 
     /**

@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ *
+ *  WSO2 LLC. licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 package org.wso2.carbon.identity.oauth2.crypto.impl;
 
 import com.nimbusds.jose.JOSEException;
@@ -22,6 +39,10 @@ import java.security.spec.MGF1ParameterSpec;
 /**
  * RSAES OAEP (SHA-512) methods for Content Encryption Key (CEK) encryption and
  * decryption. Uses the BouncyCastle.org provider. This class is thread-safe
+ /**
+ * Nimbus reference implementation:
+ * https://bitbucket.org/connect2id/nimbus-jose-jwt/src/6a6d0b3d7cf3a7a9830cc8c1e8f54b7a993c706a/src/main/java/com/
+ * nimbusds/jose/crypto/impl/RSA_OAEP_SHA2.java
  */
 @ThreadSafe
 public class RSA_OAEP_512 {

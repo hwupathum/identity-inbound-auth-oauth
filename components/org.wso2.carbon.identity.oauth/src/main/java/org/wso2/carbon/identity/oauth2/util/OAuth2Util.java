@@ -2561,9 +2561,9 @@ public class OAuth2Util {
         if (jweAlgorithm.getRequirement() != null) {
             return jweAlgorithm;
         } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(jweAlgorithm)) {
-            return new com.nimbusds.jose.JWEAlgorithm("RSA-OAEP-512", Requirement.OPTIONAL);
+            return org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512;
         } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(jweAlgorithm)) {
-            return new com.nimbusds.jose.JWEAlgorithm("RSA-OAEP-384", Requirement.OPTIONAL);
+            return org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384;
         } else {
             throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm);
         }
@@ -3109,7 +3109,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Encrypt the JWT token with given public key using relevant encryptor
+     * Encrypt the JWT token with given public key using relevant encryptor.
      *
      * @param publicKey           public key used to encrypt
      * @param signedJwt           contains signed JWT body

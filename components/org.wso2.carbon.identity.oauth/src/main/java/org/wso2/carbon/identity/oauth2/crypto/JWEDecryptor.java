@@ -69,21 +69,18 @@ public class JWEDecryptor extends RSADecrypter {
 
         // Derive the content encryption key
         com.nimbusds.jose.JWEAlgorithm alg = header.getAlgorithm();
-
-        if (!alg.equals(JWEAlgorithm.RSA_OAEP_384) && !alg.equals(JWEAlgorithm.RSA_OAEP_512)) {
-            return super.decrypt(header, encryptedKey, iv, cipherText, authTag);
-        }
-
         SecretKey cek;
 
         if (alg.equals(JWEAlgorithm.RSA_OAEP_384)) {
             cek = RSA_OAEP_384.decryptCEK(getPrivateKey(), encryptedKey.decode(),
                     getJCAContext().getKeyEncryptionProvider());
-        } else {
+        } else if (alg.equals(JWEAlgorithm.RSA_OAEP_512)){
             cek = RSA_OAEP_512.decryptCEK(getPrivateKey(), encryptedKey.decode(),
                     getJCAContext().getKeyEncryptionProvider());
+        } else {
+            // For previously supported algorithms
+            return super.decrypt(header, encryptedKey, iv, cipherText, authTag);
         }
-
         return ContentCryptoProvider.decrypt(header, encryptedKey, iv, cipherText, authTag, cek, getJCAContext());
     }
 }

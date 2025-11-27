@@ -58,6 +58,14 @@ public class OAuth2Constants {
 
     public static final int MAX_ALLOWED_LENGTH = 256;
 
+    // Bouncy castle based implementation required constants for RSA 512, 384 algorithms implementation
+    public static final String SHA384 = "SHA-384";
+    public static final String SHA512 = "SHA-512";
+    public static final String SHA256 = "SHA-256";
+    public static final String OAEP = "OAEP";
+    public static final String AES = "AES";
+    public static final String MGF1 ="MGF1";
+
     /**
      * Constants for global role based scope issuer.
      */
@@ -117,4 +125,5 @@ public class OAuth2Constants {
         public static final String REFRESH_TOKEN_VALIDITY_PERIOD = "REFRESH_TOKEN_VALIDITY_PERIOD";
         public static final String USER_TYPE = "USER_TYPE";
     }
+
 }

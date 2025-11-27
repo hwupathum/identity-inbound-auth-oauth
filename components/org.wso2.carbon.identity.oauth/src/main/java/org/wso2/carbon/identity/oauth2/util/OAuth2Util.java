@@ -2799,7 +2799,7 @@ public class OAuth2Util {
                                  String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
-        if (isRSAAlgorithm(encryptionAlgorithm) || isECDHAlgorithm(encryptionAlgorithm)) {
+        if (isSupportedAlgorithm(encryptionAlgorithm)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Signing JWT before encryption using the algorithm: %s ."
                         , signatureAlgorithm));
@@ -3431,20 +3431,20 @@ public class OAuth2Util {
 
     private static boolean isRSAAlgorithm(JWEAlgorithm algorithm) {
 
-        return (JWEAlgorithm.RSA_OAEP.equals(algorithm) || JWEAlgorithm.RSA1_5.equals(algorithm) ||
-                JWEAlgorithm.RSA_OAEP_256.equals(algorithm) ||
-                org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(algorithm)
-                        || org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(algorithm));
+        return (JWEAlgorithm.RSA_OAEP.equals(algorithm) || JWEAlgorithm.RSA1_5.equals(algorithm));
     }
 
-    private static boolean isECDHAlgorithm(JWEAlgorithm algorithm) {
+    private static boolean isSupportedAlgorithm(JWEAlgorithm algorithm) {
 
         return (JWEAlgorithm.ECDH_ES_A128KW.equals(algorithm) || JWEAlgorithm.ECDH_ES_A192KW.equals(algorithm) ||
-                JWEAlgorithm.ECDH_ES_A256KW.equals(algorithm));
+                JWEAlgorithm.ECDH_ES_A256KW.equals(algorithm) || JWEAlgorithm.RSA_OAEP.equals(algorithm) ||
+                JWEAlgorithm.RSA1_5.equals(algorithm) || JWEAlgorithm.RSA_OAEP_256.equals(algorithm) ||
+                org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(algorithm)
+                || org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(algorithm));
     }
 
     /**
-     * Method to obatin Default Signing certificate for the tenant.
+     * Method to obtain Default Signing certificate for the tenant.
      *
      * @param tenantDomain Tenant Domain as a String.
      * @param tenantId     Tenan ID as an integer.

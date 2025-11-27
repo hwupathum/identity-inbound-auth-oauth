@@ -32,6 +32,9 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * JWE Encryptor based on Bouncy Castle Implementation
+ */
 public class JWEEncryptor extends RSAEncrypter {
 
     /**

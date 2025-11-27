@@ -29,6 +29,9 @@ import org.wso2.carbon.identity.oauth2.crypto.impl.RSA_OAEP_512;
 import javax.crypto.SecretKey;
 import java.security.PrivateKey;
 
+/**
+ * JWE Decryptor based on Bouncy Castle Implementation
+ */
 public class JWEDecryptor extends RSADecrypter {
 
     /**

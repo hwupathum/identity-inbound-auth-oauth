@@ -31,10 +31,7 @@ import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.Requirement;
-import com.nimbusds.jose.crypto.ECDHEncrypter;
-import com.nimbusds.jose.crypto.RSAEncrypter;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.crypto.*;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
@@ -124,6 +121,7 @@ import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
+import org.wso2.carbon.identity.oauth2.crypto.JWEDecryptor;
 import org.wso2.carbon.identity.oauth2.crypto.JWEEncryptor;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -170,11 +168,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
@@ -3136,20 +3130,8 @@ public class OAuth2Util {
             JWEHeader header = headerBuilder.build();
 
             JWEObject jweObject = new JWEObject(header, new Payload(signedJwt));
-
-            // Encrypt with the recipient's public key for Nimbus Supported algorithms
-            if (JWEAlgorithm.RSA_OAEP.equals(encryptionAlgorithm) || JWEAlgorithm.RSA1_5.equals(encryptionAlgorithm)
-                    || JWEAlgorithm.RSA_OAEP_256.equals(encryptionAlgorithm)) {
-                jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
-                // Encrypt with the recipient's public key for algorithms based on bouncy castle implementation
-            } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(encryptionAlgorithm) ||
-                    org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(encryptionAlgorithm)) {
-                jweObject.encrypt(new JWEEncryptor((RSAPublicKey) publicKey));
-            } else if (JWEAlgorithm.ECDH_ES_A256KW.equals(encryptionAlgorithm) ||
-                    JWEAlgorithm.ECDH_ES_A192KW.equals(encryptionAlgorithm) ||
-                    JWEAlgorithm.ECDH_ES_A128KW.equals(encryptionAlgorithm)) {
-                jweObject.encrypt(new ECDHEncrypter((ECPublicKey) publicKey));
-            }
+            // Encrypt with the recipient's public key validating the encrypter type
+            jweObject.encrypt(validateEncrypterMode(encryptionAlgorithm, publicKey));
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(jweObject.serialize());
 
             if (log.isDebugEnabled()) {
@@ -3162,6 +3144,32 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
                     + " with the tenant domain: " + spTenantDomain, e);
         }
+    }
+
+    /**
+     * Validate and get the Encrypter type
+     *
+     * @param encryptionAlgorithm SP configured Encryption Algorithm
+     * @param publicKey           public key
+     * @return JWEEncrypter       encrypter type
+     */
+    protected static JWEEncrypter validateEncrypterMode(JWEAlgorithm encryptionAlgorithm, Key publicKey)
+            throws JOSEException {
+        // Use built-in Nimbus Encryptor for supported algorithms
+        if (JWEAlgorithm.RSA_OAEP.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.RSA1_5.equals(encryptionAlgorithm)
+                || JWEAlgorithm.RSA_OAEP_256.equals(encryptionAlgorithm)) {
+            return new RSAEncrypter((RSAPublicKey) publicKey);
+            // Use Bouncy castle based Encryptor for RSA-384, 512 algorithms
+        } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(encryptionAlgorithm) ||
+                org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(encryptionAlgorithm)) {
+            return new JWEEncryptor((RSAPublicKey) publicKey);
+        } else if (JWEAlgorithm.ECDH_ES_A256KW.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A192KW.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A128KW.equals(encryptionAlgorithm)) {
+            return new ECDHEncrypter((ECPublicKey) publicKey);
+        }
+        return new RSAEncrypter((RSAPublicKey) publicKey);
     }
 
     /**

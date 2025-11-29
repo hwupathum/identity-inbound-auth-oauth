@@ -151,11 +151,12 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
     }
 
     /**
-     * Validate and get the Decrypter type
+     * Validate and get the Decrypter type.
      *
      * @param encryptionAlgorithm SP configured Encryption Algorithm
      * @param privateKey          Private key
      * @return Decrypter          decryptor type
+     * @throws JOSEException
      */
     protected JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
             throws JOSEException {

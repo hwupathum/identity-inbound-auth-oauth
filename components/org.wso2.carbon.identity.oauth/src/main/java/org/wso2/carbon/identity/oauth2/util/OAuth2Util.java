@@ -3098,7 +3098,7 @@ public class OAuth2Util {
                         encryptionMethod + ", tenant: " + spTenantDomain + " & header: " + header.toString());
             }
 
-            JWEEncrypter encrypter = new JWEEncryptor((RSAPublicKey) publicKey);
+            JWEEncrypter encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
             encryptedJWT.encrypt(encrypter);
             return encryptedJWT;
         } catch (JOSEException e) {
@@ -3152,11 +3152,12 @@ public class OAuth2Util {
     }
 
     /**
-     * Validate and get the Encrypter type
+     * Validate and get the Encrypter type.
      *
      * @param encryptionAlgorithm SP configured Encryption Algorithm
      * @param publicKey           public key
      * @return JWEEncrypter       encrypter type
+     * @throws JOSEException
      */
     protected static JWEEncrypter validateEncrypterMode(JWEAlgorithm encryptionAlgorithm, Key publicKey)
             throws JOSEException {

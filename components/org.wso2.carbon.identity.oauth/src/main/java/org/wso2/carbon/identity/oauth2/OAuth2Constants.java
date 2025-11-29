@@ -125,5 +125,4 @@ public class OAuth2Constants {
         public static final String REFRESH_TOKEN_VALIDITY_PERIOD = "REFRESH_TOKEN_VALIDITY_PERIOD";
         public static final String USER_TYPE = "USER_TYPE";
     }
-
 }

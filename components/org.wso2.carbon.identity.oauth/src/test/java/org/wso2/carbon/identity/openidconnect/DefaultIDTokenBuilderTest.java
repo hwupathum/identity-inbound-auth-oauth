@@ -75,6 +75,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.openidconnect.util.TestUtils;
 import org.wso2.carbon.identity.secret.mgt.core.IdPSecretsProcessor;
 import org.wso2.carbon.identity.secret.mgt.core.SecretsProcessor;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
@@ -120,6 +121,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     private static final String AUTHORIZATION_CODE = "AuthorizationCode";
     private static final String AUTHORIZATION_CODE_VALUE = "55fe926f-3b43-3681-aecc-dc3ed7938325";
     private static final String CLIENT_ID = TestConstants.CLIENT_ID;
+    private static final String EC_CLIENT_ID  = TestConstants.EC_CLIENT_ID;
     private static final String ACCESS_TOKEN = TestConstants.ACCESS_TOKEN;
     private DefaultIDTokenBuilder defaultIDTokenBuilder;
     private OAuthTokenReqMessageContext messageContext;
@@ -211,6 +213,12 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
                 "dZa4puEYDVEJ4pu6uJuh/oXgvwcIcL6xURDav1gqTDuMrLnJrKui+FsabnWeC+XB\n" +
                 "1mRWtpZPay9xB5kVWAEVdMtGePP0/wz2zxQU9uCmjwvIsIfx307CpBI54sjomXPU\n" +
                 "DldsCG6l8QRJ3NvijWa/0olA/7BpaOtbNS6S5dBSfPScpUvVQiBYFFvMXbmd\n");
+
+        // SP for EC algorithm test. Load EC cert from EC keystore
+        ServiceProvider ecServiceProvider = new ServiceProvider();
+        ecServiceProvider.setSpProperties(serviceProviders);
+        ecServiceProvider.setCertificateContent(TestUtils.getEcCertificateContentBase64());
+
         ApplicationManagementService applicationMgtService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationMgtService);
         Map<String, ServiceProvider> fileBasedSPs = CommonTestUtils.getFileBasedSPs();
@@ -220,12 +228,18 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
                      .getApplicationExcludingFileBasedSPs(TEST_APPLICATION_NAME, SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(fileBasedSPs.get(TEST_APPLICATION_NAME));
         when(applicationMgtService
-                .getServiceProviderNameByClientId(anyString(), anyString(),
-                        anyString()))
+                .getServiceProviderNameByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(TEST_APPLICATION_NAME);
         when(applicationMgtService
                 .getServiceProviderByClientId(anyString(), anyString(), anyString()))
-                .thenReturn(serviceProvider);
+                .thenAnswer(invocation -> {
+                    String clientId = (String) invocation.getArguments()[0];
+                    if (EC_CLIENT_ID.equals(clientId)) {
+                        return ecServiceProvider;
+                    } else {
+                        return serviceProvider;
+                    }
+                });
         AuthenticationMethodNameTranslator authenticationMethodNameTranslator =
                 new AuthenticationMethodNameTranslatorImpl();
         OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
@@ -329,7 +343,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     public void testBuildEncryptedIDTokenForSupportedAlgorithm(String algorithm) throws Exception {
 
         mockRealmService();
-        OAuthAppDO entry = getOAuthAppDO(algorithm);
+        OAuthAppDO entry = getOAuthAppDO(algorithm, CLIENT_ID);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
@@ -349,6 +363,45 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
 
+    @DataProvider(name = "testBuildEncryptedIDTokenForSupportedECAlgorithm")
+    public Object[][] testBuildEncryptedIDTokenForSupportedECAlgorithm() {
+
+        return new Object[][] {
+                {"ECDH-ES+A128KW"}, {"ECDH-ES+A192KW"}, {"ECDH-ES+A256KW"}
+        };
+    }
+
+    @Test(dataProvider = "testBuildEncryptedIDTokenForSupportedECAlgorithm")
+    public void testBuildEncryptedIDTokenForSupportedECAlgorithm(String algorithm) throws Exception {
+
+        mockRealmService();
+        // Message context for the EC client
+        OAuthTokenReqMessageContext ecMessageContext =
+                getTokenReqMessageContextForUser(getDefaultAuthenticatedLocalUser(), EC_CLIENT_ID);
+        ecMessageContext.addProperty(AUTHORIZATION_CODE, AUTHORIZATION_CODE_VALUE);
+        OAuth2AccessTokenRespDTO ecTokenRespDTO = new OAuth2AccessTokenRespDTO();
+        ecTokenRespDTO.setAccessToken(ACCESS_TOKEN);
+        OAuthAppDO entry = getOAuthAppDO(algorithm, EC_CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(EC_CLIENT_ID, entry);
+
+        String idToken = defaultIDTokenBuilder.buildIDToken(ecMessageContext, ecTokenRespDTO);
+        EncryptedJWT encryptedJWT = decryptToken(idToken, algorithm);
+        JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
+        Assert.assertNotNull(claims.getJWTID());
+        Assert.assertEquals(claims.getAudience().get(0), EC_CLIENT_ID);
+        Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+        Assert.assertEquals(claims.getSubject(), "user1");
+        Assert.assertEquals(claims.getClaim("acr"),  "acr");
+        Assert.assertEquals(claims.getClaim("isk"), "idp");
+        Assert.assertEquals(claims.getClaim("nonce"), "nonce");
+        Assert.assertNotNull(claims.getClaim("nbf"));
+        long expirationTime = ((Date) claims.getClaim("exp")).getTime();
+        Assert.assertTrue(expirationTime < (new Date()).getTime());
+        long issueTime = ((Date) claims.getClaim("iat")).getTime();
+        Assert.assertTrue(issueTime <= (new Date()).getTime());
+    }
+
+
     @Test(dataProvider = "testBuildEncryptedIDTokenForSupportedAlgorithm")
     public void testBuildEncryptedIDTokenForAuthorization(String algorithm) throws Exception {
 
@@ -357,7 +410,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = new OAuth2AuthorizeRespDTO();
         oAuth2AuthorizeRespDTO.setAccessToken(ACCESS_TOKEN);
 
-        OAuthAppDO entry = getOAuthAppDO(algorithm);
+        OAuthAppDO entry = getOAuthAppDO(algorithm, CLIENT_ID);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         mockRealmService();
@@ -375,11 +428,37 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
 
+    @Test(dataProvider = "testBuildEncryptedIDTokenForSupportedECAlgorithm")
+    public void testBuildECEncryptedIDTokenForAuthorization(String algorithm) throws Exception {
+
+        OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = getOAuthAuthzReqMessageContextForUser
+                (getDefaultAuthenticatedLocalUser(), EC_CLIENT_ID);
+        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = new OAuth2AuthorizeRespDTO();
+        oAuth2AuthorizeRespDTO.setAccessToken(ACCESS_TOKEN);
+
+        OAuthAppDO entry = getOAuthAppDO(algorithm, EC_CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(EC_CLIENT_ID, entry);
+
+        mockRealmService();
+        String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
+        EncryptedJWT encryptedJWT = decryptToken(idToken, algorithm);
+        JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
+        Assert.assertNotNull(claims.getJWTID());
+        Assert.assertEquals(claims.getAudience().get(0), EC_CLIENT_ID);
+        Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+        Assert.assertEquals(claims.getSubject(),  "user1");
+        Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
+        long expirationTime = ((Date) claims.getClaim("exp")).getTime();
+        Assert.assertTrue(expirationTime < (new Date()).getTime());
+        long issueTime = ((Date) claims.getClaim("iat")).getTime();
+        Assert.assertTrue(issueTime <= (new Date()).getTime());
+    }
+
     @DataProvider(name = "testBuildEncryptedIDTokenForUnSupportedAlgorithm")
     public Object[][] testBuildEncryptedIDTokenForUnSupportedAlgorithm() {
 
         return new Object[][] {
-                {"A128KW"}, {"A192KW"}, {"A256KW"}, {"ECDH-ES"}, {"A256GCMKW"}
+                {"A128KW"}, {"A192KW"}, {"A256KW"}, {"A256GCMKW"}
         };
     }
 
@@ -387,7 +466,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     public void testBuildEncryptedIDTokenForUnSupportedAlgorithm(String algorithm) throws Exception {
 
         mockRealmService();
-        OAuthAppDO entry = getOAuthAppDO(algorithm);
+        OAuthAppDO entry = getOAuthAppDO(algorithm,CLIENT_ID);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         try {
@@ -431,10 +510,10 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         }
     }
 
-    private OAuthAppDO getOAuthAppDO(String algorithm) throws Exception {
+    private OAuthAppDO getOAuthAppDO(String algorithm, String clientId) throws Exception {
 
         OAuthAppDO entry = new OAuthAppDO();
-        entry.setOauthConsumerKey(CLIENT_ID);
+        entry.setOauthConsumerKey(clientId);
         entry.setOauthConsumerSecret("87n9a540f544777860e75f605d435");
         entry.setApplicationName("myApp");
         entry.setCallbackUrl(TestConstants.CALLBACK);
@@ -452,12 +531,28 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
     private EncryptedJWT decryptToken(String  token, String algorithm) throws Exception {
 
-        InputStream file = Files.newInputStream(Paths.get("src/test/resources/keyStore/encryption/appKeystore.jks"));
-        KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-        keystore.load(file, "wso2carbon".toCharArray());
-        String alias = "wso2carbon";
-        // Get the private key. Password for the key store is 'wso2carbon'.
-        RSAPrivateKey privateKey = (RSAPrivateKey) keystore.getKey(alias, "wso2carbon".toCharArray());
+        PrivateKey privateKey;
+        if (JWEAlgorithm.ECDH_ES_A256KW.getName().equals(algorithm)
+                || JWEAlgorithm.ECDH_ES_A192KW.getName().equals(algorithm)
+                || JWEAlgorithm.ECDH_ES_A128KW.getName().equals(algorithm)) {
+
+            // EC private key for ECDH tests
+            try (InputStream in = Files.newInputStream(
+                    Paths.get("src/test/resources/keyStore/encryption/ecAppKeystore.jks"))) {
+                KeyStore ks = KeyStore.getInstance("JKS");
+                ks.load(in, "wso2carbon".toCharArray());
+                privateKey = (ECPrivateKey) ks.getKey("ecapp", "wso2carbon".toCharArray());
+            }
+
+        } else {
+            // RSA path
+            try (InputStream in = Files.newInputStream(
+                    Paths.get("src/test/resources/keyStore/encryption/appKeystore.jks"))) {
+                KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+                ks.load(in, "wso2carbon".toCharArray());
+                privateKey = (RSAPrivateKey) ks.getKey("wso2carbon", "wso2carbon".toCharArray());
+            }
+        }
         EncryptedJWT encryptedJWT = EncryptedJWT.parse(token);
         JWEDecrypter decrypter = validateDecryptorMode(algorithm, privateKey);
         encryptedJWT.decrypt(decrypter);

@@ -321,7 +321,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     public Object[][] testBuildEncryptedIDTokenForSupportedAlgorithm() {
 
         return new Object[][] {
-                {"RSA-OAEP-256"}, {"RSA-OAEP"}, {"RSA1_5"}, {"RSA_OAEP_384"}, {"RSA_OAEP_512"}
+                {"RSA-OAEP-256"}, {"RSA-OAEP"}, {"RSA1_5"}, {"RSA-OAEP-384"}, {"RSA-OAEP-512"}
         };
     }
 

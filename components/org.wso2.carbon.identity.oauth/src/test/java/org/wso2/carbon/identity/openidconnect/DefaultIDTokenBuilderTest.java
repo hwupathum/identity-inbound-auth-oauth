@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEDecrypter;
+import com.nimbusds.jose.crypto.ECDHDecrypter;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -58,6 +61,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.TestUtil;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.crypto.JWEDecryptor;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -83,7 +87,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
+import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -315,7 +321,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     public Object[][] testBuildEncryptedIDTokenForSupportedAlgorithm() {
 
         return new Object[][] {
-                {"RSA-OAEP-256"}, {"RSA-OAEP"}, {"RSA1_5"}
+                {"RSA-OAEP-256"}, {"RSA-OAEP"}, {"RSA1_5"}, {"RSA_OAEP_384"}, {"RSA_OAEP_512"}
         };
     }
 
@@ -327,7 +333,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
-        EncryptedJWT encryptedJWT = decryptToken(idToken);
+        EncryptedJWT encryptedJWT = decryptToken(idToken, algorithm);
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertNotNull(claims.getJWTID());
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
@@ -356,7 +362,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
         mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
-        EncryptedJWT encryptedJWT = decryptToken(idToken);
+        EncryptedJWT encryptedJWT = decryptToken(idToken, algorithm);
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertNotNull(claims.getJWTID());
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
@@ -444,7 +450,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         return entry;
     }
 
-    private EncryptedJWT decryptToken (String  token) throws Exception {
+    private EncryptedJWT decryptToken(String  token, String algorithm) throws Exception {
 
         InputStream file = Files.newInputStream(Paths.get("src/test/resources/keyStore/encryption/appKeystore.jks"));
         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -453,9 +459,29 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         // Get the private key. Password for the key store is 'wso2carbon'.
         RSAPrivateKey privateKey = (RSAPrivateKey) keystore.getKey(alias, "wso2carbon".toCharArray());
         EncryptedJWT encryptedJWT = EncryptedJWT.parse(token);
-        RSADecrypter decrypter = new RSADecrypter(privateKey);
+        JWEDecrypter decrypter = validateDecryptorMode(algorithm, privateKey);
         encryptedJWT.decrypt(decrypter);
         return encryptedJWT;
+    }
+
+    private JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
+            throws Exception {
+        // Use built-in Nimbus Decryptor for built-in supported algorithms
+        if (JWEAlgorithm.RSA_OAEP.getName().equals(encryptionAlgorithm) ||
+                JWEAlgorithm.RSA1_5.getName().equals(encryptionAlgorithm)
+                || JWEAlgorithm.RSA_OAEP_256.getName().equals(encryptionAlgorithm)) {
+            return new RSADecrypter(privateKey);
+            // Use Bouncy castle based Decryptor for RSA-384, 512 algorithms
+        } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.getName().equals(
+                encryptionAlgorithm) || org.wso2.carbon.identity.oauth2.crypto
+                .JWEAlgorithm.RSA_OAEP_512.getName().equals(encryptionAlgorithm)) {
+            return new JWEDecryptor(privateKey);
+        } else if (JWEAlgorithm.ECDH_ES_A256KW.getName().equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A192KW.getName().equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A128KW.getName().equals(encryptionAlgorithm)) {
+            return new ECDHDecrypter((ECPrivateKey) privateKey);
+        }
+        return new RSADecrypter(privateKey);
     }
 
     private AuthenticatedUser getDefaultAuthenticatedLocalUser() {

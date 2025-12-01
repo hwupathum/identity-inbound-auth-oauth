@@ -170,12 +170,10 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                 encryptionAlgorithm) || org.wso2.carbon.identity.oauth2.crypto
                 .JWEAlgorithm.RSA_OAEP_512.getName().equals(encryptionAlgorithm)) {
             return new JWEDecryptor((RSAPrivateKey) privateKey);
-        } else if (JWEAlgorithm.ECDH_ES_A256KW.getName().equals(encryptionAlgorithm) ||
-                JWEAlgorithm.ECDH_ES_A192KW.getName().equals(encryptionAlgorithm) ||
-                JWEAlgorithm.ECDH_ES_A128KW.getName().equals(encryptionAlgorithm)) {
-            return new ECDHDecrypter((ECPrivateKey) privateKey);
+        } else {
+            throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
+                    " is not supported");
         }
-        return new RSADecrypter((RSAPrivateKey) privateKey);
     }
 
     protected boolean isEncrypted(String requestObject) {

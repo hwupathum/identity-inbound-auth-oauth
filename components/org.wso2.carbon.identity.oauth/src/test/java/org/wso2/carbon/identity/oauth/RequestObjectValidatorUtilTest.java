@@ -39,9 +39,8 @@ public class RequestObjectValidatorUtilTest {
         SignedJWT mockJwt = mock(SignedJWT.class);
         when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
 
-        JWSHeader mockHeader = mock(JWSHeader.class);
-        when(mockJwt.getHeader()).thenReturn(mockHeader);
-        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.PS256);
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.PS256).build();
+        when(mockJwt.getHeader()).thenReturn(header);
 
         Certificate mockCert = mock(Certificate.class);
         RSAPublicKey mockPk = mock(RSAPublicKey.class);
@@ -57,9 +56,8 @@ public class RequestObjectValidatorUtilTest {
         SignedJWT mockJwt = mock(SignedJWT.class);
         when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
 
-        JWSHeader mockHeader = mock(JWSHeader.class);
-        when(mockJwt.getHeader()).thenReturn(mockHeader);
-        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.RS256);
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256).build();
+        when(mockJwt.getHeader()).thenReturn(header);
 
         Certificate mockCert = mock(Certificate.class);
         RSAPublicKey mockPk = mock(RSAPublicKey.class);
@@ -75,9 +73,8 @@ public class RequestObjectValidatorUtilTest {
         SignedJWT mockJwt = mock(SignedJWT.class);
         when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
 
-        JWSHeader mockHeader = mock(JWSHeader.class);
-        when(mockJwt.getHeader()).thenReturn(mockHeader);
-        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.ES256);
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).build();
+        when(mockJwt.getHeader()).thenReturn(header);
 
         Certificate mockCert = mock(Certificate.class);
         ECPublicKey mockPk = mock(ECPublicKey.class);
@@ -93,9 +90,8 @@ public class RequestObjectValidatorUtilTest {
         SignedJWT mockJwt = mock(SignedJWT.class);
         when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
 
-        JWSHeader mockHeader = mock(JWSHeader.class);
-        when(mockJwt.getHeader()).thenReturn(mockHeader);
-        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.PS256);
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.PS256).build();
+        when(mockJwt.getHeader()).thenReturn(header);
 
         Certificate mockCert = mock(Certificate.class);
         ECPublicKey mockPk = mock(ECPublicKey.class);
@@ -111,9 +107,8 @@ public class RequestObjectValidatorUtilTest {
         SignedJWT mockJwt = mock(SignedJWT.class);
         when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
 
-        JWSHeader mockHeader = mock(JWSHeader.class);
-        when(mockJwt.getHeader()).thenReturn(mockHeader);
-        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.ES256);
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).build();
+        when(mockJwt.getHeader()).thenReturn(header);
 
         Certificate mockCert = mock(Certificate.class);
         RSAPublicKey mockPk = mock(RSAPublicKey.class);
@@ -129,9 +124,8 @@ public class RequestObjectValidatorUtilTest {
         SignedJWT mockJwt = mock(SignedJWT.class);
         when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
 
-        JWSHeader mockHeader = mock(JWSHeader.class);
-        when(mockJwt.getHeader()).thenReturn(mockHeader);
-        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.EdDSA);
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).build();
+        when(mockJwt.getHeader()).thenReturn(header);
 
         Certificate mockCert = mock(Certificate.class);
 

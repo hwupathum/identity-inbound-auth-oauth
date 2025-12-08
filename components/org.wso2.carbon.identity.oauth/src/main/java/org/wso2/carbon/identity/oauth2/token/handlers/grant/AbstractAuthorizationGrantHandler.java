@@ -137,8 +137,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         try {
             authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
         } catch (UserIdNotFoundException e) {
-            throw new IdentityOAuth2Exception(
-                    "User id is not available for user: " + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
+            if (StringUtils.equalsIgnoreCase(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType(),
+                    OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
+                authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserName();
+            } else {
+                throw new IdentityOAuth2Exception("User id is not available for user: " +
+                        tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
+            }
         }
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokReqMsgCtx.getAuthorizedUser());
         String tokenBindingReference = getTokenBindingReference(tokReqMsgCtx);
@@ -602,13 +607,19 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 String authorizedOrganization;
                 try {
                     userId = tokenToCache.getAuthzUser().getUserId();
-                    authorizedOrganization = tokenToCache.getAuthzUser().getAccessingOrganization();
-                    if (StringUtils.isBlank(authorizedOrganization)) {
-                        authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
-                    }
                 } catch (UserIdNotFoundException e) {
-                    throw new IdentityOAuth2Exception(
-                            "User id is not available for user: " + tokenToCache.getAuthzUser().getLoggableUserId(), e);
+                    if (StringUtils.equalsIgnoreCase(newTokenBean.getGrantType(),
+                            OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
+                        userId = tokenToCache.getAuthzUser().getUserName();
+                    } else {
+                        throw new IdentityOAuth2Exception("User id is not available for user: "
+                                + tokenToCache.getAuthzUser().getLoggableUserId(), e);
+                    }
+                }
+
+                authorizedOrganization = tokenToCache.getAuthzUser().getAccessingOrganization();
+                if (StringUtils.isBlank(authorizedOrganization)) {
+                    authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
                 }
 
                 String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());

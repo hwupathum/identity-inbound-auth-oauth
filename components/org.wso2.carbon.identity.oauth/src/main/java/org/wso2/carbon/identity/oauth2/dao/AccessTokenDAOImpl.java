@@ -565,7 +565,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         try {
                             authzUser.getUserId();
                         } catch (UserIdNotFoundException e) {
-                            authzUser.setUserId(authzUser.getUserName());
+                            authzUser.setUserId(StringUtils.EMPTY);
                         }
                     }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,

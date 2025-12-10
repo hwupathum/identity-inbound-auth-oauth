@@ -139,7 +139,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         } catch (UserIdNotFoundException e) {
             if (StringUtils.equalsIgnoreCase(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType(),
                     OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
-                authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserName();
+                authorizedUserId = StringUtils.EMPTY;
             } else {
                 throw new IdentityOAuth2Exception("User id is not available for user: " +
                         tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
@@ -610,7 +610,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 } catch (UserIdNotFoundException e) {
                     if (StringUtils.equalsIgnoreCase(newTokenBean.getGrantType(),
                             OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
-                        userId = tokenToCache.getAuthzUser().getUserName();
+                        userId = StringUtils.EMPTY;
                     } else {
                         throw new IdentityOAuth2Exception("User id is not available for user: "
                                 + tokenToCache.getAuthzUser().getLoggableUserId(), e);

@@ -72,7 +72,7 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
             userId = accessTokenDO.getAuthzUser().getUserId();
         } catch (UserIdNotFoundException e) {
             if (StringUtils.equalsIgnoreCase(accessTokenDO.getGrantType(), OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
-                userId = accessTokenDO.getAuthzUser().getUserName();
+                userId = StringUtils.EMPTY;
             } else {
                 throw new CacheEntryListenerException("User id not found for user: "
                         + accessTokenDO.getAuthzUser().getLoggableMaskedUserId());

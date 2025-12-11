@@ -499,8 +499,10 @@
                         --add-opens java.base/sun.net.www.protocol.https=ALL-UNNAMED
                         --add-opens java.base/java.nio.file=ALL-UNNAMED
                         --add-opens java.base/java.security=ALL-UNNAMED
+                        --add-opens java.base/java.security.cert=ALL-UNNAMED
                         --add-opens java.base/sun.security.util=ALL-UNNAMED
                         --add-opens java.base/sun.security.jca=ALL-UNNAMED
+                        --add-opens java.base/sun.security.x509=ALL-UNNAMED
                         --add-opens java.base/java.lang.reflect=ALL-UNNAMED
                         --add-opens java.base/java.util.concurrent=ALL-UNNAMED
                         --add-opens java.base/sun.reflect.misc=ALL-UNNAMED

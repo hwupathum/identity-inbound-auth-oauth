@@ -566,6 +566,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             authzUser.getUserId();
                         } catch (UserIdNotFoundException e) {
                             authzUser.setUserId(StringUtils.EMPTY);
+                            if (log.isDebugEnabled()) {
+                                log.debug("User ID is not available for user: " + authzUser.getLoggableMaskedUserId() +
+                                        ". Setting user ID as empty since the flow is a client credentials grant flow.");
+                            }
                         }
                     }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,

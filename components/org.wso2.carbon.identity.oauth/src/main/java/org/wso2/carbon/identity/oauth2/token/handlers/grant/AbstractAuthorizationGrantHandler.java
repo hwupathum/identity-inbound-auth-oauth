@@ -140,6 +140,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             if (StringUtils.equalsIgnoreCase(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType(),
                     OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
                 authorizedUserId = StringUtils.EMPTY;
+                if (log.isDebugEnabled()) {
+                    log.debug("User ID is not available for user: " +
+                            tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId() +
+                            ". Setting user ID as empty since the flow is a client credentials grant flow.");
+                }
             } else {
                 throw new IdentityOAuth2Exception("User id is not available for user: " +
                         tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
@@ -611,6 +616,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     if (StringUtils.equalsIgnoreCase(newTokenBean.getGrantType(),
                             OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
                         userId = StringUtils.EMPTY;
+                        if (log.isDebugEnabled()) {
+                            log.debug("User ID is not available for user: " +
+                                    tokenToCache.getAuthzUser().getLoggableMaskedUserId() +
+                                    ". Setting user ID as empty since the flow is a client credentials grant flow.");
+                        }
                     } else {
                         throw new IdentityOAuth2Exception("User id is not available for user: "
                                 + tokenToCache.getAuthzUser().getLoggableUserId(), e);

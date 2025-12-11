@@ -73,6 +73,10 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
         } catch (UserIdNotFoundException e) {
             if (StringUtils.equalsIgnoreCase(accessTokenDO.getGrantType(), OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
                 userId = StringUtils.EMPTY;
+                if (log.isDebugEnabled()) {
+                    log.debug("User ID is not available for user: " + accessTokenDO.getAuthzUser() +
+                            ". Setting user ID as empty since the flow is a client credentials grant flow.");
+                }
             } else {
                 throw new CacheEntryListenerException("User id not found for user: "
                         + accessTokenDO.getAuthzUser().getLoggableMaskedUserId());

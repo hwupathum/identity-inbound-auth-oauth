@@ -3445,7 +3445,8 @@ public class OAuth2Util {
 
     private static boolean isRSAAlgorithm(JWEAlgorithm algorithm) {
 
-        return (JWEAlgorithm.RSA_OAEP.equals(algorithm) || JWEAlgorithm.RSA1_5.equals(algorithm));
+        return (JWEAlgorithm.RSA_OAEP.equals(algorithm) || JWEAlgorithm.RSA1_5.equals(algorithm) ||
+                JWEAlgorithm.RSA_OAEP_256.equals(algorithm));
     }
 
     private static boolean isSupportedAlgorithm(JWEAlgorithm algorithm) {

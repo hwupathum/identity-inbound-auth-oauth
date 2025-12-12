@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.core.AbstractAdmin;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -708,6 +709,24 @@ public class OAuth2Service extends AbstractAdmin {
                                 .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
                             tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
                         }
+                        String userId;
+                        try {
+                            userId = accessTokenDO.getAuthzUser().getUserId();
+                        } catch (UserIdNotFoundException e) {
+                            if (StringUtils.equalsIgnoreCase(accessTokenDO.getGrantType(),
+                                    OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
+                                userId = StringUtils.EMPTY;
+                                accessTokenDO.getAuthzUser().setUserId(userId);
+                                if (log.isDebugEnabled()) {
+                                    log.debug("User ID is not available for user: " +
+                                            accessTokenDO.getAuthzUser().getLoggableMaskedUserId() + ". Setting user" +
+                                            " ID as empty since the flow is a client credentials grant flow.");
+                                }
+                            } else {
+                                throw e;
+                            }
+                        }
+
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                                 OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser(),
@@ -715,7 +734,6 @@ public class OAuth2Service extends AbstractAdmin {
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser());
                         OAuthUtil.clearOAuthCache(accessTokenDO);
                         String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
-                        String userId = accessTokenDO.getAuthzUser().getUserId();
                         synchronized ((revokeRequestDTO.getConsumerKey() + ":" + userId + ":" + scope + ":"
                                 + tokenBindingReference).intern()) {
                             getRevocationProcessor().revokeAccessToken(revokeRequestDTO, accessTokenDO);

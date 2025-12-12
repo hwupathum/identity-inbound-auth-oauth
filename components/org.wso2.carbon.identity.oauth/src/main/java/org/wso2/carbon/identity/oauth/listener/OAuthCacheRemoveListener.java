@@ -75,7 +75,8 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
                     OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
                 userId = StringUtils.EMPTY;
                 if (log.isDebugEnabled()) {
-                    log.debug("User ID is not available for user: " + accessTokenDO.getAuthzUser() +
+                    log.debug("User ID is not available for user: " +
+                            accessTokenDO.getAuthzUser().getLoggableMaskedUserId() +
                             ". Setting user ID as empty since the flow is a client credentials grant flow.");
                 }
             } else {

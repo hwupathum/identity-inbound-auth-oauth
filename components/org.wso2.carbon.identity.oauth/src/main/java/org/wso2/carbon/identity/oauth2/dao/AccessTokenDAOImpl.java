@@ -568,7 +568,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             authzUser.setUserId(StringUtils.EMPTY);
                             if (log.isDebugEnabled()) {
                                 log.debug("User ID is not available for user: " + authzUser.getLoggableMaskedUserId() +
-                                        ". Setting user ID as empty since the flow is a client credentials grant flow.");
+                                        ". Setting user ID as empty since the flow is a client " +
+                                        "credentials grant flow.");
                             }
                         }
                     }

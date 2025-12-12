@@ -5611,3 +5611,4 @@ public class OAuth2Util {
                 Boolean.parseBoolean(IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY));
     }
 }
+

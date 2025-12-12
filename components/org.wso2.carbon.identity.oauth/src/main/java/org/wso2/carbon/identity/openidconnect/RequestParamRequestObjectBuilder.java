@@ -23,7 +23,6 @@ import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.crypto.ECDHDecrypter;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -48,7 +47,6 @@ import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.security.Key;
 import java.security.PrivateKey;
-import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 

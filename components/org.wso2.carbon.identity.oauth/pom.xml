@@ -375,6 +375,7 @@
                         </Bundle-SymbolicName>
                         <Private-Package>
                             org.wso2.carbon.identity.oauth.internal,
+                            org.wso2.carbon.identity.oauth2.crypto.*
                         </Private-Package>
                         <Import-Package>
                             javax.cache,
@@ -464,7 +465,7 @@
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.internal,
                             !org.wso2.carbon.identity.oauth.common.*,
-                            !org.wso2.carbon.identity.oauth2.crypto.*;
+                            !org.wso2.carbon.identity.oauth2.crypto.*,
                             org.wso2.carbon.identity.oauth.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.oauth2.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",

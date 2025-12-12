@@ -68,6 +68,9 @@ public class JWEEncryptor extends RSAEncrypter {
             throws JOSEException {
 
         final com.nimbusds.jose.JWEAlgorithm alg = header.getAlgorithm();
+        if (!(alg.equals(JWEAlgorithm.RSA_OAEP_384) || alg.equals(JWEAlgorithm.RSA_OAEP_512))) {
+            return super.encrypt(header, clearText);
+        }
 
         final EncryptionMethod enc = header.getEncryptionMethod();
 
@@ -86,14 +89,11 @@ public class JWEEncryptor extends RSAEncrypter {
         if (alg.equals(JWEAlgorithm.RSA_OAEP_384)) {
             encryptedKey = Base64URL.encode(RSA_OAEP_384.encryptCEK(getPublicKey(),
                     cek, getJCAContext().getKeyEncryptionProvider()));
-        } else if (alg.equals(JWEAlgorithm.RSA_OAEP_512)) {
+        } else {
+             // Encrypt with RSA_OAEP_512 as these are the only two extended algorithms
             encryptedKey = Base64URL.encode(RSA_OAEP_512.encryptCEK(getPublicKey(),
                     cek, getJCAContext().getKeyEncryptionProvider()));
-        } else {
-            // For previously supported algorithms
-            return super.encrypt(header, clearText);
         }
-
         return ContentCryptoProvider.encrypt(header, clearText, cek, encryptedKey, getJCAContext());
     }
 }

@@ -66,7 +66,6 @@ public class JWEDecryptor extends RSADecrypter {
 
         critPolicy.ensureHeaderPasses(header);
 
-
         // Derive the content encryption key
         com.nimbusds.jose.JWEAlgorithm alg = header.getAlgorithm();
         SecretKey cek;

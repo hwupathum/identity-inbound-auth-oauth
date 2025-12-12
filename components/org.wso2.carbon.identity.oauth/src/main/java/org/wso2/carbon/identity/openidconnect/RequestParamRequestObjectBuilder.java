@@ -158,6 +158,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
      */
     protected JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
             throws JOSEException {
+
         // Use built-in Nimbus Decryptor for built-in supported algorithms
         if (JWEAlgorithm.RSA_OAEP.getName().equals(encryptionAlgorithm) ||
                 JWEAlgorithm.RSA1_5.getName().equals(encryptionAlgorithm)

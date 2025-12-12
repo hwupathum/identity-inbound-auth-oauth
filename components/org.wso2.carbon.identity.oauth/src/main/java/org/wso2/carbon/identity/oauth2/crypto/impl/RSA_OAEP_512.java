@@ -36,7 +36,6 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.MGF1ParameterSpec;
 
-
 /**
  * RSAES OAEP (SHA-512) methods for Content Encryption Key (CEK) encryption and
  * decryption. Uses the BouncyCastle.org provider. This class is thread-safe

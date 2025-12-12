@@ -97,8 +97,8 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
         clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon",
                 System.getProperty(CarbonBaseConstants.CARBON_HOME));
-        wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon", System.getProperty(CarbonBaseConstants
-                .CARBON_HOME));
+        wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
+                System.getProperty(CarbonBaseConstants.CARBON_HOME));
         rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
 
         mockStatic(OAuth2Util.class);
@@ -214,12 +214,12 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
             // RSA-based nimbus supported algs
             PublicKey publicKey = wso2KeyStore.getCertificate("wso2carbon").getPublicKey();
             encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
-        } else if (jweAlg.getName().equals(org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.getName()) ||
-                jweAlg.getName().equals(org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.getName())) {
+        } else if (jweAlg.getName().equals(org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.getName())
+                || jweAlg.getName().equals(org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.getName()))
+        {
             PublicKey publicKey = wso2KeyStore.getCertificate("wso2carbon").getPublicKey();
             encrypter = new JWEEncryptor((RSAPublicKey) publicKey);
         }
-
         jweObject.encrypt(encrypter);
         return jweObject.serialize();
     }

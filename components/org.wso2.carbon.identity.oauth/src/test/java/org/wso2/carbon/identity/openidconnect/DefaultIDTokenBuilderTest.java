@@ -401,7 +401,6 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
 
-
     @Test(dataProvider = "testBuildEncryptedIDTokenForSupportedAlgorithm")
     public void testBuildEncryptedIDTokenForAuthorization(String algorithm) throws Exception {
 
@@ -561,6 +560,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
     private JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
             throws Exception {
+
         // Use built-in Nimbus Decryptor for built-in supported algorithms
         if (JWEAlgorithm.RSA_OAEP.getName().equals(encryptionAlgorithm) ||
                 JWEAlgorithm.RSA1_5.getName().equals(encryptionAlgorithm)

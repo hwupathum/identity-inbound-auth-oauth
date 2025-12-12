@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oauth2.crypto;
 
 import com.nimbusds.jose.Requirement;
+
 /**
  * JWE Algorithm Definition based on Nimbus JWE Algorithm for RSA_OAEP_384 & RSA_OAEP_512
  */

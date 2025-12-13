@@ -375,6 +375,7 @@
                         </Bundle-SymbolicName>
                         <Private-Package>
                             org.wso2.carbon.identity.oauth.internal,
+                            org.wso2.carbon.identity.oauth2.crypto.*
                         </Private-Package>
                         <Import-Package>
                             javax.cache,
@@ -464,6 +465,7 @@
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.internal,
                             !org.wso2.carbon.identity.oauth.common.*,
+                            !org.wso2.carbon.identity.oauth2.crypto.*,
                             org.wso2.carbon.identity.oauth.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.oauth2.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
@@ -498,8 +500,10 @@
                         --add-opens java.base/sun.net.www.protocol.https=ALL-UNNAMED
                         --add-opens java.base/java.nio.file=ALL-UNNAMED
                         --add-opens java.base/java.security=ALL-UNNAMED
+                        --add-opens java.base/java.security.cert=ALL-UNNAMED
                         --add-opens java.base/sun.security.util=ALL-UNNAMED
                         --add-opens java.base/sun.security.jca=ALL-UNNAMED
+                        --add-opens java.base/sun.security.x509=ALL-UNNAMED
                         --add-opens java.base/java.lang.reflect=ALL-UNNAMED
                         --add-opens java.base/java.util.concurrent=ALL-UNNAMED
                         --add-opens java.base/sun.reflect.misc=ALL-UNNAMED

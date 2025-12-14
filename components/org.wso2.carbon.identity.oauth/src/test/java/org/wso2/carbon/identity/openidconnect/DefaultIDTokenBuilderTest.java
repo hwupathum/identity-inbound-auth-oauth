@@ -216,16 +216,16 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         // SP for EC algorithm test. Load EC cert from EC keystore
         ServiceProvider ecServiceProvider = new ServiceProvider();
         ecServiceProvider.setSpProperties(serviceProviders);
-        ecServiceProvider.setCertificateContent("MIIBxjCCAW2gAwIBAgIIUB7n24mT0TwwCgYIKoZIzj0EAwIwVzELMAkGA1UEBhMC\n" +
-                "RlIxDDAKBgNVBAgTA01QTDEMMAoGA1UEBxMDTVBMMQ0wCwYDVQQKEwR0ZXN0MQ0w\n" +
-                "CwYDVQQLEwR0ZXN0MQ4wDAYDVQQDEwVlY2FwcDAgFw0yNTEyMDExMzUxNTlaGA8y\n" +
-                "MTI1MTEwNzEzNTE1OVowVzELMAkGA1UEBhMCRlIxDDAKBgNVBAgTA01QTDEMMAoG\n" +
-                "A1UEBxMDTVBMMQ0wCwYDVQQKEwR0ZXN0MQ0wCwYDVQQLEwR0ZXN0MQ4wDAYDVQQD\n" +
-                "EwVlY2FwcDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABMo/NQbpjAKwzut1K/Zc\n" +
-                "9MMgdBsLSx/hlyHpEvHLIEHw3+h5IJA5IR7fqo5nNBKPg+IvuEFsWRrD9x888rXk\n" +
-                "RtijITAfMB0GA1UdDgQWBBRJV4+Td9r+xuxjc/x1giKQtsAaZTAKBggqhkjOPQQD\n" +
-                "AgNHADBEAiAzPLLp8hvcniU2Uyz3EW77I6IL/zKA9GA+wSz2rHqZdQIgAXfb0DSj\n" +
-                "ttH1tUe7Hx0GCXAWG6IsuiTODpK+NJHWF04=");
+        ecServiceProvider.setCertificateContent("MIIBtzCCAV6gAwIBAgIUYLqNiFc/l1Df1B9fzmoBmx6O/yQwCgYIKoZIzj0EAwIw\n" +
+                "XDELMAkGA1UEBhMCRlIxDDAKBgNVBAgMA01QTDEMMAoGA1UEBwwDTVBMMQ0wCwYD\n" +
+                "VQQKDAR0ZXN0MQ0wCwYDVQQLDAR0ZXN0MRMwEQYDVQQDDAoqLnRlc3QuY29tMB4X\n" +
+                "DTI1MTIxNDIwMzA0NloXDTI2MTIxNDIwMzA0NlowXDELMAkGA1UEBhMCRlIxDDAK\n" +
+                "BgNVBAgMA01QTDEMMAoGA1UEBwwDTVBMMQ0wCwYDVQQKDAR0ZXN0MQ0wCwYDVQQL\n" +
+                "DAR0ZXN0MRMwEQYDVQQDDAoqLnRlc3QuY29tMFkwEwYHKoZIzj0CAQYIKoZIzj0D\n" +
+                "AQcDQgAEeJv1PqRq8mrW8wgFQFUhXCoMp+IRueYmeit9RBvJXGqqKP72RkhaTQhV\n" +
+                "j4p7mOzUCBvv0KBPd5YTZu9QIxIIrDAKBggqhkjOPQQDAgNHADBEAiBm+VFiVby1\n" +
+                "3eUFuWpNeKdATIGPCrtysk7gfeUw9w10hAIgKLnU8NE/vxP7vhexLduf3+iYHMtE\n" +
+                "+HrcDQb6L9HR1PY=");
 
         ApplicationManagementService applicationMgtService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationMgtService);

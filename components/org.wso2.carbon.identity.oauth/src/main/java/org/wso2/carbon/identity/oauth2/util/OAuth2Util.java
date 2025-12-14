@@ -3161,7 +3161,7 @@ public class OAuth2Util {
      * @return JWEEncrypter       encrypter type
      * @throws JOSEException
      */
-    protected static JWEEncrypter validateEncrypterMode(JWEAlgorithm encryptionAlgorithm, Key publicKey)
+    private static JWEEncrypter validateEncrypterMode(JWEAlgorithm encryptionAlgorithm, Key publicKey)
             throws JOSEException {
 
         // Use built-in Nimbus Encryptor for supported algorithms

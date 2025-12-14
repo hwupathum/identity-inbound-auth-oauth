@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObject;
-import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -159,19 +158,13 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
     protected JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
             throws JOSEException {
 
-        // Use built-in Nimbus Decryptor for built-in supported algorithms
-        if (JWEAlgorithm.RSA_OAEP.getName().equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA1_5.getName().equals(encryptionAlgorithm)
-                || JWEAlgorithm.RSA_OAEP_256.getName().equals(encryptionAlgorithm)) {
-            return new RSADecrypter((RSAPrivateKey) privateKey);
-            // Use Bouncy castle based Decryptor for RSA-384, 512 algorithms
-        } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.getName().equals(
+        /// Use Bouncy castle based Decryptor for RSA-384, 512 algorithms
+        if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.getName().equals(
                 encryptionAlgorithm) || org.wso2.carbon.identity.oauth2.crypto
                 .JWEAlgorithm.RSA_OAEP_512.getName().equals(encryptionAlgorithm)) {
-            return new JWEDecryptor((RSAPrivateKey) privateKey);
+            return new JWEDecryptor(privateKey);
         } else {
-            throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
-                    " is not supported");
+            return new RSADecrypter(privateKey);
         }
     }
 

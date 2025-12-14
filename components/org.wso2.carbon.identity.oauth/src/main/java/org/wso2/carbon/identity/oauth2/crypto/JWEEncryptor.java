@@ -24,13 +24,14 @@ import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ContentCryptoProvider;
 import com.nimbusds.jose.util.Base64URL;
-import org.wso2.carbon.identity.oauth2.crypto.impl.RSA_OAEP_384;
-import org.wso2.carbon.identity.oauth2.crypto.impl.RSA_OAEP_512;
+import org.wso2.carbon.identity.oauth2.crypto.impl.RSAOAEP384;
+import org.wso2.carbon.identity.oauth2.crypto.impl.RSAOAEP512;
 
-import javax.crypto.SecretKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.HashSet;
 import java.util.Set;
+
+import javax.crypto.SecretKey;
 
 /**
  * JWE Encryptor based on Bouncy Castle Implementation
@@ -87,11 +88,11 @@ public class JWEEncryptor extends RSAEncrypter {
         final Base64URL encryptedKey; // The second JWE part
 
         if (alg.equals(JWEAlgorithm.RSA_OAEP_384)) {
-            encryptedKey = Base64URL.encode(RSA_OAEP_384.encryptCEK(getPublicKey(),
+            encryptedKey = Base64URL.encode(RSAOAEP384.encryptCEK(getPublicKey(),
                     cek, getJCAContext().getKeyEncryptionProvider()));
         } else {
              // Encrypt with RSA_OAEP_512 as these are the only two extended algorithms
-            encryptedKey = Base64URL.encode(RSA_OAEP_512.encryptCEK(getPublicKey(),
+            encryptedKey = Base64URL.encode(RSAOAEP512.encryptCEK(getPublicKey(),
                     cek, getJCAContext().getKeyEncryptionProvider()));
         }
         return ContentCryptoProvider.encrypt(header, clearText, cek, encryptedKey, getJCAContext());

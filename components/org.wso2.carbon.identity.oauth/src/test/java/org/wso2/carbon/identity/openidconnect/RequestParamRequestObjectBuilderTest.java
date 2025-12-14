@@ -18,11 +18,11 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
-import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWEEncrypter;
 import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
@@ -70,7 +71,6 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.identity.common.testng.TestConstants.CARBON_TENANT_DOMAIN;
-
 import static org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImplTest.CLIENT_PUBLIC_CERT_ALIAS;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
@@ -214,9 +214,8 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
             // RSA-based nimbus supported algs
             PublicKey publicKey = wso2KeyStore.getCertificate("wso2carbon").getPublicKey();
             encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
-        } else if (jweAlg.getName().equals(org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.getName())
-                || jweAlg.getName().equals(org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.getName()))
-        {
+        } else if (jweAlg.equals(org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512)
+                || jweAlg.equals(org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384)) {
             PublicKey publicKey = wso2KeyStore.getCertificate("wso2carbon").getPublicKey();
             encrypter = new JWEEncryptor((RSAPublicKey) publicKey);
         }

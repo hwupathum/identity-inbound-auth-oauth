@@ -2825,7 +2825,8 @@ public class OAuth2Util {
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
-     * @deprecated replaced by {@link #encryptWithSPCertificate(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
+     * @deprecated replaced by {@link
+     * #encryptWithSPCertificate(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
      */
     @Deprecated
     private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,

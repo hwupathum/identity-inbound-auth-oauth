@@ -465,7 +465,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     public void testBuildEncryptedIDTokenForUnSupportedAlgorithm(String algorithm) throws Exception {
 
         mockRealmService();
-        OAuthAppDO entry = getOAuthAppDO(algorithm,CLIENT_ID);
+        OAuthAppDO entry = getOAuthAppDO(algorithm, CLIENT_ID);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         try {

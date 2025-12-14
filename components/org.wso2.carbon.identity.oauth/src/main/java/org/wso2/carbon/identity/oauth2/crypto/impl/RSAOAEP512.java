@@ -23,12 +23,6 @@ import com.nimbusds.jose.crypto.impl.CipherHelper;
 import net.jcip.annotations.ThreadSafe;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.OAEPParameterSpec;
-import javax.crypto.spec.PSource;
-import javax.crypto.spec.SecretKeySpec;
 import java.security.AlgorithmParameters;
 import java.security.PrivateKey;
 import java.security.Provider;
@@ -36,8 +30,15 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.MGF1ParameterSpec;
 
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
+import javax.crypto.spec.SecretKeySpec;
+
 /**
- * RSAES OAEP (SHA-384) methods for Content Encryption Key (CEK) encryption and
+ * RSAES OAEP (SHA-512) methods for Content Encryption Key (CEK) encryption and
  * decryption. Uses the BouncyCastle.org provider. This class is thread-safe
  /**
  * Nimbus reference implementation:
@@ -45,12 +46,12 @@ import java.security.spec.MGF1ParameterSpec;
  * main/java/com/nimbusds/jose/crypto/impl/RSA_OAEP_SHA2.java
  */
 @ThreadSafe
-public class RSA_OAEP_384 {
+public class RSAOAEP512 {
 
     /**
-     * The JCA algorithm name for RSA-OAEP-384.
+     * The JCA algorithm name for RSA-OAEP-512.
      */
-    private static final String RSA_OEAP_384_JCA_ALG = "RSA/ECB/OAEPWithSHA-384AndMGF1Padding";
+    private static final String RSA_OEAP_512_JCA_ALG = "RSA/ECB/OAEPWithSHA-512AndMGF1Padding";
 
     /**
      * Encrypts the specified Content Encryption Key (CEK).
@@ -69,12 +70,11 @@ public class RSA_OAEP_384 {
             throws JOSEException {
 
         try {
-
             AlgorithmParameters algp = AlgorithmParametersHelper.getInstance(OAuth2Constants.OAEP, provider);
-            AlgorithmParameterSpec paramSpec = new OAEPParameterSpec(OAuth2Constants.SHA384, OAuth2Constants.MGF1,
-                    MGF1ParameterSpec.SHA384, PSource.PSpecified.DEFAULT);
+            AlgorithmParameterSpec paramSpec = new OAEPParameterSpec(OAuth2Constants.SHA512, OAuth2Constants.MGF1,
+                    MGF1ParameterSpec.SHA512, PSource.PSpecified.DEFAULT);
             algp.init(paramSpec);
-            Cipher cipher = CipherHelper.getInstance(RSA_OEAP_384_JCA_ALG, provider);
+            Cipher cipher = CipherHelper.getInstance(RSA_OEAP_512_JCA_ALG, provider);
             cipher.init(Cipher.ENCRYPT_MODE, pub, algp);
             return cipher.doFinal(cek.getEncoded());
 
@@ -108,10 +108,10 @@ public class RSA_OAEP_384 {
 
         try {
             AlgorithmParameters algp = AlgorithmParametersHelper.getInstance(OAuth2Constants.OAEP, provider);
-            AlgorithmParameterSpec paramSpec = new OAEPParameterSpec(OAuth2Constants.SHA384, OAuth2Constants.MGF1,
-                    MGF1ParameterSpec.SHA384, PSource.PSpecified.DEFAULT);
+            AlgorithmParameterSpec paramSpec = new OAEPParameterSpec(OAuth2Constants.SHA512, OAuth2Constants.MGF1,
+                    MGF1ParameterSpec.SHA512, PSource.PSpecified.DEFAULT);
             algp.init(paramSpec);
-            Cipher cipher = CipherHelper.getInstance(RSA_OEAP_384_JCA_ALG, provider);
+            Cipher cipher = CipherHelper.getInstance(RSA_OEAP_512_JCA_ALG, provider);
             cipher.init(Cipher.DECRYPT_MODE, priv, algp);
             return new SecretKeySpec(cipher.doFinal(encryptedCEK), OAuth2Constants.AES);
 
@@ -128,5 +128,5 @@ public class RSA_OAEP_384 {
     /**
      * Prevents public instantiation.
      */
-    private RSA_OAEP_384() { }
+    private RSAOAEP512() { }
 }

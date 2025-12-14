@@ -23,11 +23,12 @@ import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ContentCryptoProvider;
 import com.nimbusds.jose.crypto.impl.CriticalHeaderParamsDeferral;
 import com.nimbusds.jose.util.Base64URL;
-import org.wso2.carbon.identity.oauth2.crypto.impl.RSA_OAEP_384;
-import org.wso2.carbon.identity.oauth2.crypto.impl.RSA_OAEP_512;
+import org.wso2.carbon.identity.oauth2.crypto.impl.RSAOAEP384;
+import org.wso2.carbon.identity.oauth2.crypto.impl.RSAOAEP512;
+
+import java.security.PrivateKey;
 
 import javax.crypto.SecretKey;
-import java.security.PrivateKey;
 
 /**
  * JWE Decryptor based on Bouncy Castle Implementation
@@ -71,10 +72,10 @@ public class JWEDecryptor extends RSADecrypter {
         SecretKey cek;
 
         if (alg.equals(JWEAlgorithm.RSA_OAEP_384)) {
-            cek = RSA_OAEP_384.decryptCEK(getPrivateKey(), encryptedKey.decode(),
+            cek = RSAOAEP384.decryptCEK(getPrivateKey(), encryptedKey.decode(),
                     getJCAContext().getKeyEncryptionProvider());
-        } else if (alg.equals(JWEAlgorithm.RSA_OAEP_512)){
-            cek = RSA_OAEP_512.decryptCEK(getPrivateKey(), encryptedKey.decode(),
+        } else if (alg.equals(JWEAlgorithm.RSA_OAEP_512)) {
+            cek = RSAOAEP512.decryptCEK(getPrivateKey(), encryptedKey.decode(),
                     getJCAContext().getKeyEncryptionProvider());
         } else {
             // For previously supported algorithms

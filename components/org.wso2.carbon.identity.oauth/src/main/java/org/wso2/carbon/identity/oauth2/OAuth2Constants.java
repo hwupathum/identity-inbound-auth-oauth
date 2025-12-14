@@ -63,7 +63,7 @@ public class OAuth2Constants {
     public static final String SHA512 = "SHA-512";
     public static final String OAEP = "OAEP";
     public static final String AES = "AES";
-    public static final String MGF1 ="MGF1";
+    public static final String MGF1 = "MGF1";
 
     /**
      * Constants for global role based scope issuer.

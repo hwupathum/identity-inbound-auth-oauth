@@ -472,7 +472,7 @@ public class DefaultOAuth2ScopeValidator {
                 String oidcClaim = oidcToLocalClaimMappings.get(localClaim);
                 if (oidcClaim != null) {
                     String scope = oidcClaimToScopeMap.get(oidcClaim);
-                    if (scope != null) {
+                    if (scope != null && requestedScopes.contains(scope)) {
                         validatedOIDCScopes.add(scope);
                     } else if (LOG.isDebugEnabled()) {
                         LOG.debug("No OIDC scope found for the OIDC claim: " + oidcClaim +

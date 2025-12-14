@@ -47,14 +47,11 @@ import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.io.FileInputStream;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
-import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Connection;
@@ -456,16 +453,5 @@ public class TestUtils {
                 {jsonWebEncryption6, claims5, true, true, false, "FAPI Request Object without mandatory parameters " +
                         "and signed with a permitted signing algorithm RS256, signed and encrypted.", true}
         };
-    }
-
-    public static String getEcCertificateContentBase64() throws Exception {
-
-        KeyStore ks = KeyStore.getInstance("JKS");
-        try (InputStream in = Files.newInputStream(
-                Paths.get("src/test/resources/keyStore/encryption/ecAppKeystore.jks"))) {
-            ks.load(in, "wso2carbon".toCharArray());
-        }
-        Certificate cert = ks.getCertificate("ecapp"); // alias you used for EC key
-        return java.util.Base64.getEncoder().encodeToString(cert.getEncoded());
     }
 }

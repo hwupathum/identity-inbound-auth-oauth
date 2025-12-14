@@ -155,7 +155,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
      * @return Decrypter          decryptor type
      * @throws JOSEException
      */
-    protected JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
+    private JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
             throws JOSEException {
 
         /// Use Bouncy castle based Decryptor for RSA-384, 512 algorithms
@@ -163,9 +163,11 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                 encryptionAlgorithm) || org.wso2.carbon.identity.oauth2.crypto
                 .JWEAlgorithm.RSA_OAEP_512.getName().equals(encryptionAlgorithm)) {
             return new JWEDecryptor(privateKey);
-        } else {
-            return new RSADecrypter(privateKey);
         }
+        if (encryptionAlgorithm == null) {
+            log.debug("Request Object Encryption Algorithm is not found.");
+        }
+        return new RSADecrypter(privateKey);
     }
 
     protected boolean isEncrypted(String requestObject) {

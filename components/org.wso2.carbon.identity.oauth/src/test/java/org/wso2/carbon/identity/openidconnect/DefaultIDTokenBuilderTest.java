@@ -75,7 +75,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.identity.openidconnect.util.TestUtils;
 import org.wso2.carbon.identity.secret.mgt.core.IdPSecretsProcessor;
 import org.wso2.carbon.identity.secret.mgt.core.SecretsProcessor;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
@@ -217,7 +216,16 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         // SP for EC algorithm test. Load EC cert from EC keystore
         ServiceProvider ecServiceProvider = new ServiceProvider();
         ecServiceProvider.setSpProperties(serviceProviders);
-        ecServiceProvider.setCertificateContent(TestUtils.getEcCertificateContentBase64());
+        ecServiceProvider.setCertificateContent("MIIBxjCCAW2gAwIBAgIIUB7n24mT0TwwCgYIKoZIzj0EAwIwVzELMAkGA1UEBhMC\n" +
+                "RlIxDDAKBgNVBAgTA01QTDEMMAoGA1UEBxMDTVBMMQ0wCwYDVQQKEwR0ZXN0MQ0w\n" +
+                "CwYDVQQLEwR0ZXN0MQ4wDAYDVQQDEwVlY2FwcDAgFw0yNTEyMDExMzUxNTlaGA8y\n" +
+                "MTI1MTEwNzEzNTE1OVowVzELMAkGA1UEBhMCRlIxDDAKBgNVBAgTA01QTDEMMAoG\n" +
+                "A1UEBxMDTVBMMQ0wCwYDVQQKEwR0ZXN0MQ0wCwYDVQQLEwR0ZXN0MQ4wDAYDVQQD\n" +
+                "EwVlY2FwcDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABMo/NQbpjAKwzut1K/Zc\n" +
+                "9MMgdBsLSx/hlyHpEvHLIEHw3+h5IJA5IR7fqo5nNBKPg+IvuEFsWRrD9x888rXk\n" +
+                "RtijITAfMB0GA1UdDgQWBBRJV4+Td9r+xuxjc/x1giKQtsAaZTAKBggqhkjOPQQD\n" +
+                "AgNHADBEAiAzPLLp8hvcniU2Uyz3EW77I6IL/zKA9GA+wSz2rHqZdQIgAXfb0DSj\n" +
+                "ttH1tUe7Hx0GCXAWG6IsuiTODpK+NJHWF04=");
 
         ApplicationManagementService applicationMgtService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationMgtService);

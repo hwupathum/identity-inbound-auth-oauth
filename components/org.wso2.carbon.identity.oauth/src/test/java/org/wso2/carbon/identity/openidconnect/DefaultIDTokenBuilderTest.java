@@ -546,7 +546,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
             // EC private key for ECDH tests
             try (InputStream in = Files.newInputStream(
                     Paths.get("src/test/resources/keyStore/encryption/ecAppKeystore.jks"))) {
-                KeyStore ks = KeyStore.getInstance("JKS");
+                KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
                 ks.load(in, "wso2carbon".toCharArray());
                 privateKey = (ECPrivateKey) ks.getKey("ecapp", "wso2carbon".toCharArray());
             }

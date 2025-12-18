@@ -83,9 +83,21 @@ public class RequestObjectValidatorUtil {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(oAuth2Parameters.getClientId(),
                     oAuth2Parameters.getTenantDomain());
             String algorithm = oAuthAppDO.getRequestObjectSignatureAlgorithm();
-            if (StringUtils.isNotEmpty(algorithm) && !algorithm.equals(jwt.getHeader().getAlgorithm().getName())) {
-                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Request Object signature verification failed. Invalid signature algorithm.");
+            if (StringUtils.isNotBlank(algorithm)) {
+                String mappedAlgorithm = StringUtils.EMPTY;
+                try {
+                    mappedAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(algorithm).getName();
+                } catch (IdentityOAuth2Exception e) {
+                    // Ignore the exception.
+                }
+
+                boolean isAlgorithmMatches = StringUtils.equals(algorithm, jwt.getHeader().getAlgorithm().getName()) ||
+                        StringUtils.equals(mappedAlgorithm, jwt.getHeader().getAlgorithm().getName());
+
+                if (!isAlgorithmMatches) {
+                    throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Request Object signature verification failed. Invalid signature algorithm.");
+                }
             }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while retrieving Oauth application "

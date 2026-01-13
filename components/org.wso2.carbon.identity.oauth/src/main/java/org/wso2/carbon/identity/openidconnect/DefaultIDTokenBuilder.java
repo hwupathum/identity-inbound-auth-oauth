@@ -146,7 +146,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
             AuthenticatedUser authorizedUser = tokenReqMsgCtxt.getAuthorizedUser();
-            String subjectClaim = getSubjectClaim(tokenReqMsgCtxt, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+            String subjectClaim =
+                    getSubjectClaim(tokenReqMsgCtxt, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
             // Get subject identifier according to the configured subject type.
             subjectClaim = OIDCClaimUtil.getSubjectClaim(subjectClaim, oAuthAppDO);
 
@@ -239,7 +240,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             JWTClaimsSet jwtClaimsSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
 
             if (isInvalidToken(jwtClaimsSet)) {
-                throw new IDTokenValidationFailureException("Error while validating ID Token token for required claims");
+                throw new IDTokenValidationFailureException(
+                        "Error while validating ID Token token for required claims");
             }
 
             if (isUnsignedIDToken()) {

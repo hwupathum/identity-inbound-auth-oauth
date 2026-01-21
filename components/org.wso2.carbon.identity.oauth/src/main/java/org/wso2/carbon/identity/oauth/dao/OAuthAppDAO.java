@@ -802,6 +802,7 @@ public class OAuthAppDAO {
                             String spTenantDomain = user.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                            oauthApp.setAccessTokenClaims(getAccessTokenClaims(connection, oauthApp.getId()));
                         }
                     }
 

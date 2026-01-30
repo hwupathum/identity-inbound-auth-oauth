@@ -2012,9 +2012,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         try {
             String sqlQuery;
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME;
+                sqlQuery = SQLQueries
+                        .GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME_WITH_TIME_CREATED_AND_VALIDITY_PERIOD;
             } else {
-                sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY;
+                sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_WITH_TIME_CREATED_AND_VALIDITY_PERIOD;
             }
             sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(sqlQuery, userStoreDomain);
 
@@ -2044,6 +2045,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         authenticatedIDP = rs.getString(6);
                         authorizedOrganizationId = rs.getString(8);
                     }
+                    Timestamp timeCreated = rs.getTimestamp(9, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                    long validityPeriod = rs.getLong(10);
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
                             OAuth2Util.getTenantDomain(tenentId), authenticatedIDP, authorizedOrganizationId,
@@ -2055,6 +2058,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     aTokenDetail.setScope(scope);
                     aTokenDetail.setAuthzUser(user);
                     aTokenDetail.setAuthorizedOrganizationId(authorizedOrganizationId);
+                    aTokenDetail.setIssuedTime(timeCreated);
+                    aTokenDetail.setValidityPeriod(validityPeriod);
                     tokenMap.put(token, aTokenDetail);
                 }
             }

@@ -65,6 +65,11 @@ public class OAuth2Constants {
     public static final String AES = "AES";
     public static final String MGF1 = "MGF1";
 
+    // Constants required for EC key pair generation for existing tenants for backward compatibility
+    public static final String EC_KEY_ALG = "EC";
+    public static final String EC_CURVE = "secp256r1";
+    public static final String EC_SHA256 = "SHA256withECDSA";
+
     /**
      * Constants for global role based scope issuer.
      */

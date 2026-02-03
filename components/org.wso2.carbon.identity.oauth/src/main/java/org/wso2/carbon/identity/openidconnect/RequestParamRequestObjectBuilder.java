@@ -47,10 +47,10 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.security.Key;
-import java.security.PrivateKey;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.Key;
+import java.security.PrivateKey;
 import java.text.ParseException;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;

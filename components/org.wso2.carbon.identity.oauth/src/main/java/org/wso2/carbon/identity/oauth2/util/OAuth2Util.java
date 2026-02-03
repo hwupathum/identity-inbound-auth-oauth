@@ -3227,7 +3227,8 @@ public class OAuth2Util {
                     " is not supported");
         } else if (JWSAlgorithm.ES256.equals(signatureAlgorithm)) {
             return signJWTWithEC(jwtClaimsSet, signatureAlgorithm, tenantDomain);
-        } else {
+        }
+        else {
             throw new RuntimeException("Provided signature algorithm: " + signatureAlgorithm +
                     " is not supported");
         }

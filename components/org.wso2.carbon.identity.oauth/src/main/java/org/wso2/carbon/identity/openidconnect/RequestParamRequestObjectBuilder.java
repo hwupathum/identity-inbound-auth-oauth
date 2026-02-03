@@ -19,12 +19,10 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObject;
-import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.crypto.ECDHDecrypter;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.PlainJWT;
@@ -47,10 +45,9 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.RSAPrivateKey;
 import java.security.Key;
 import java.security.PrivateKey;
+import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
@@ -132,10 +129,10 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             } else {
                 applicationRequestObjectEncryptionAlgorithm = encryptedJWT.getHeader().getAlgorithm().getName();
             }
-            JWEAlgorithm encryptionAlgorithm = JWEAlgorithm.parse(applicationRequestObjectEncryptionAlgorithm);
-            PrivateKey privateKey = OAuth2Util.getEncryptionPrivateKey(oAuth2Parameters.getTenantDomain(),
-                    encryptionAlgorithm);
-            JWEDecrypter decrypter = validateDecryptorMode(encryptionAlgorithm, privateKey);
+
+            // TO-DO: need to support ECDH Key pair
+            PrivateKey privateKey = getRSAPrivateKey(oAuth2Parameters);
+            JWEDecrypter decrypter = validateDecryptorMode(applicationRequestObjectEncryptionAlgorithm, privateKey);
             encryptedJWT.decrypt(decrypter);
             JWEObject jweObject = JWEObject.parse(requestObject);
             jweObject.decrypt(decrypter);
@@ -208,23 +205,18 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
      * @return Decrypter          decryptor type
      * @throws JOSEException
      */
-    private JWEDecrypter validateDecryptorMode(JWEAlgorithm encryptionAlgorithm, PrivateKey privateKey)
+    private JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
             throws JOSEException {
 
-        // Use Bouncy castle based Decryptor for RSA-384, 512 algorithms
-        if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(
+        /// Use Bouncy castle based Decryptor for RSA-384, 512 algorithms
+        if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.getName().equals(
                 encryptionAlgorithm) || org.wso2.carbon.identity.oauth2.crypto
-                .JWEAlgorithm.RSA_OAEP_512.equals(encryptionAlgorithm)) {
+                .JWEAlgorithm.RSA_OAEP_512.getName().equals(encryptionAlgorithm)) {
             return new JWEDecryptor(privateKey);
-        } else if (JWEAlgorithm.ECDH_ES_A256KW.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.ECDH_ES_A192KW.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.ECDH_ES_A128KW.equals(encryptionAlgorithm)) {
-            return new ECDHDecrypter((ECPrivateKey) privateKey);
         }
         if (encryptionAlgorithm == null) {
             log.debug("Request Object Encryption Algorithm is not found.");
         }
-        // For all other nimbus supported RSA algorithms
         return new RSADecrypter(privateKey);
     }
 
@@ -232,7 +224,6 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         return requestObject.split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWE;
     }
 
-    @Deprecated
     protected RSAPrivateKey getRSAPrivateKey(OAuth2Parameters oAuth2Parameters) throws IdentityOAuth2Exception {
         String tenantDomain = getTenantDomainForDecryption(oAuth2Parameters);
         int tenantId = OAuth2Util.getTenantId(tenantDomain);

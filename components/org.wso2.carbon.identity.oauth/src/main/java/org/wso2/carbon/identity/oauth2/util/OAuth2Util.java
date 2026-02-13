@@ -5959,4 +5959,23 @@ public class OAuth2Util {
         return isLegacySessionBoundTokenBehaviourEnabled() &&
                 Boolean.parseBoolean(IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY));
     }
+
+    /**
+     * Extracts the user identifier (username) from the token request parameters.
+     *
+     * @param tokenReq OAuth2AccessTokenReqDTO containing the token request parameters.
+     * @return The user identifier if present, otherwise null.
+     */
+    public static String getUserIdentifierFromRequest(OAuth2AccessTokenReqDTO tokenReq) {
+
+        if (tokenReq == null || tokenReq.getRequestParameters() == null
+                || tokenReq.getRequestParameters().length == 0) {
+            return null;
+        }
+        return Arrays.stream(tokenReq.getRequestParameters())
+                .filter(parameter -> "username".equals(parameter.getKey()))
+                .map(parameter -> parameter.getValue()[0])
+                .findFirst()
+                .orElse(null);
+    }
 }

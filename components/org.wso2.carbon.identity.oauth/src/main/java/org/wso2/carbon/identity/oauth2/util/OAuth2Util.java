@@ -760,10 +760,11 @@ public class OAuth2Util {
                  */
                 if (isUsernameCaseSensitive) {
                     OAuthCache.getInstance()
-                            .addToCache(new OAuthCacheKey(clientId + ":" + username), new ClientCredentialDO(username));
+                            .addToCacheOnRead(new OAuthCacheKey(clientId + ":" + username),
+                                    new ClientCredentialDO(username));
                 } else {
-                    OAuthCache.getInstance().addToCache(new OAuthCacheKey(clientId + ":" + username.toLowerCase()),
-                            new ClientCredentialDO(username));
+                    OAuthCache.getInstance().addToCacheOnRead(new OAuthCacheKey(clientId + ":" +
+                                    username.toLowerCase()), new ClientCredentialDO(username));
                 }
                 if (log.isDebugEnabled()) {
                     log.debug("Caching username : " + username);
@@ -2224,7 +2225,7 @@ public class OAuth2Util {
         // Add the token back to the cache in the case of a cache miss but don't add to cache when OAuth2 token
         // hashing feature enabled inorder to reduce the complexity.
         if (!cacheHit & OAuth2Util.isHashDisabled()) {
-            OAuthCache.getInstance().addToCache(cacheKey, accessTokenDO);
+            OAuthCache.getInstance().addToCacheOnRead(cacheKey, accessTokenDO);
             if (log.isDebugEnabled()) {
                 log.debug("Access Token Info object was added back to the cache.");
             }
@@ -2516,7 +2517,7 @@ public class OAuth2Util {
         } else {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getLoginTenantId());
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO);
             }
             return oAuthAppDO;
         }

@@ -18,83 +18,150 @@
 
 package org.wso2.carbon.identity.oauth2.token;
 
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.oltu.oauth2.common.error.OAuthError;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
-import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
+import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.ResponseHeader;
-import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
-import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
-import org.wso2.carbon.identity.oauth2.token.handlers.grant.PasswordGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
-import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
-import org.wso2.carbon.utils.CarbonUtils;
-import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 
-import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Map;
+import java.lang.reflect.Method;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertTrue;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
-
-/**
- * Unit test cases for {@link AccessTokenIssuer}
- */
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.when;
 
 public class AccessTokenIssuerTest {
 
-    public static final String SOME_CLIENT_ID = "some-client-id";
-    @Mock
-    private OAuthServerConfiguration oAuthServerConfiguration;
+    @DataProvider(name = "federatedAndCacheStateData")
+    public Object[][] federatedAndCacheStateData() {
+        // Each row: {isFederatedUser, cacheHasEntry}.
+        return new Object[][]{
+                {true, false},   // federated user -> cache add expected (cache miss).
+                {false, true}    // non-federated user with existing cache entry -> no cache add expected.
+        };
+    }
 
-    @Mock
-    private OAuthAppDO mockOAuthAppDO;
+    @Test(dataProvider = "federatedAndCacheStateData")
+    public void testCacheBehavior(boolean isFederatedUser, boolean cacheHasEntry) throws Exception {
 
-    @Mock
-    private PasswordGrantHandler passwordGrantHandler;
+        // Use a unique access token to avoid collision with other tests.
+        String accessToken = "ut_access_token_dp_" + (isFederatedUser ? "add" : "exist");
+        OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
+        tokenRespDTO.setAccessToken(accessToken);
+        tokenRespDTO.setTokenId(isFederatedUser ? "token-id-123" : "token-id-xyz");
+        tokenRespDTO.setRefreshTokenExpiresInMillis(isFederatedUser ? 60_000L : 30_000L);
 
-    @Mock
-    private OAuth2AccessTokenRespDTO mockOAuth2AccessTokenRespDTO;
+        AuthorizationGrantCacheEntry entry = new AuthorizationGrantCacheEntry();
 
-    @Mock
-    private JDBCPermissionBasedInternalScopeValidator scopeValidator;
+        // Mock the AuthorizationGrantCache static getInstance() and IdentityUtil to avoid Carbon runtime dependency.
+        try (MockedStatic<AuthorizationGrantCache> mockedCacheStatic = Mockito.mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<IdentityUtil> mockedIdentityUtil = Mockito.mockStatic(IdentityUtil.class)) {
+            AuthorizationGrantCache mockCache = Mockito.mock(AuthorizationGrantCache.class);
+            mockedCacheStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockCache);
 
-    private static final String DUMMY_GRANT_TYPE = "dummy_grant_type";
-    private static final String ID_TOKEN = "dummyIDToken";
-    private static final String[] SCOPES_WITHOUT_OPENID = new String[]{"scope1", "scope2"};
-    private static final String[] SCOPES_WITH_OPENID = new String[]{"scope1", OAuthConstants.Scope.OPENID};
+            // Prevent IdentityUtil from triggering config reads.
+            mockedIdentityUtil.when(() -> IdentityUtil.isTokenLoggable(any())).thenReturn(false);
+
+            // Simulate cache hit or miss based on test data.
+            AuthorizationGrantCacheEntry existingEntry = null;
+            if (cacheHasEntry) {
+                existingEntry = new AuthorizationGrantCacheEntry();
+                existingEntry.setTokenId("existing-token-id");
+            }
+            Mockito.when(mockCache.getValueFromCache(any(AuthorizationGrantCacheKey.class))).thenReturn(existingEntry);
+
+            // Create an AccessTokenIssuer mock instance without invoking constructor.
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+
+            // Invoke private method via reflection.
+            Method method = AccessTokenIssuer.class.getDeclaredMethod(
+                    "cacheUserAttributesAgainstAccessToken",
+                    AuthorizationGrantCacheEntry.class,
+                    OAuth2AccessTokenRespDTO.class,
+                    boolean.class);
+            method.setAccessible(true);
+            method.invoke(issuer, entry, tokenRespDTO, isFederatedUser);
+
+            // Verify addToCacheByToken invocation according to expected logic.
+            ArgumentCaptor<AuthorizationGrantCacheKey> keyCaptor =
+                    ArgumentCaptor.forClass(AuthorizationGrantCacheKey.class);
+            ArgumentCaptor<AuthorizationGrantCacheEntry> entryCaptor =
+                    ArgumentCaptor.forClass(AuthorizationGrantCacheEntry.class);
+
+            boolean expectAdd = isFederatedUser || !cacheHasEntry;
+            if (expectAdd) {
+                Mockito.verify(mockCache, times(1)).addToCacheByToken(keyCaptor.capture(), entryCaptor.capture());
+
+                AuthorizationGrantCacheEntry cachedEntry = entryCaptor.getValue();
+                // tokenId should be set from tokenRespDTO.
+                Assert.assertEquals(cachedEntry.getTokenId(), tokenRespDTO.getTokenId());
+                // validityPeriod should be set to refreshTokenExpiresInMillis converted to nanos.
+                Assert.assertEquals(cachedEntry.getValidityPeriod(),
+                        TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis()));
+                // verify key contains the access token value.
+                AuthorizationGrantCacheKey capturedKey = keyCaptor.getValue();
+                Assert.assertEquals(capturedKey.getUserAttributesId(), accessToken);
+            } else {
+                Mockito.verify(mockCache, never()).addToCacheByToken(any(AuthorizationGrantCacheKey.class),
+                        any(AuthorizationGrantCacheEntry.class));
+
+                // The passed-in entry should not have been modified (tokenId should still be null).
+                Assert.assertNull(entry.getTokenId());
+            }
+        }
+    }
+
+    @Test
+        public void testValidateGrantExceptionLogsSanitizedError() throws Exception {
+
+        // Enable debug at JUL level so that commons-logging Jdk14Logger reports debug enabled.
+        java.util.logging.Logger.getLogger(AccessTokenIssuer.class.getName())
+            .setLevel(java.util.logging.Level.FINE);
+
+        AuthorizationGrantHandler handler = Mockito.mock(AuthorizationGrantHandler.class);
+        OAuth2AccessTokenReqDTO req = new OAuth2AccessTokenReqDTO();
+        OAuthTokenReqMessageContext ctx = new OAuthTokenReqMessageContext(req);
+
+        when(handler.isOfTypeApplicationUser(any(OAuthTokenReqMessageContext.class))).thenReturn(true);
+        when(handler.validateGrant(any(OAuthTokenReqMessageContext.class)))
+            .thenThrow(new IdentityOAuth2Exception("sensitive message"));
+
+        try (MockedStatic<LoggerUtils> loggerUtilsMock = Mockito.mockStatic(LoggerUtils.class);
+             MockedStatic<OAuth2Util> oauth2UtilMock = Mockito.mockStatic(OAuth2Util.class)) {
+
+            loggerUtilsMock.when(() -> LoggerUtils.getSanitizedErrorMessage("sensitive message", "user"))
+                .thenReturn("sanitized message");
+            oauth2UtilMock.when(() -> OAuth2Util.getUserIdentifierFromRequest(req)).thenReturn("user");
+
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+            Method method = AccessTokenIssuer.class.getDeclaredMethod("validateGrantAndIssueToken",
+                OAuth2AccessTokenReqDTO.class, OAuthTokenReqMessageContext.class,
+                OAuth2AccessTokenRespDTO.class, AuthorizationGrantHandler.class,
+                String.class, OAuthAppDO.class);
+            method.setAccessible(true);
+            Object result = method.invoke(issuer, req, ctx, null, handler, "tenant", null);
+
+            Assert.assertNotNull(result);
+            Assert.assertTrue(result instanceof OAuth2AccessTokenRespDTO);
+            OAuth2AccessTokenRespDTO resp = (OAuth2AccessTokenRespDTO) result;
+            Assert.assertTrue(resp.isError());
+            Assert.assertEquals(resp.getErrorMsg(), "sensitive message");
+        }
+        }
 
 //    @BeforeMethod
 //    public void setUp() throws Exception {

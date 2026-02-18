@@ -44,7 +44,6 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
-import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
@@ -149,13 +148,8 @@ public class JwksEndpointTest {
                 OAuthServerConfiguration.class);
              MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<KeystoreUtils> keystoreUtils = mockStatic(KeystoreUtils.class);) {
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
 
-            Path keystorePath =
-                    Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
-                            "security", "wso2carbon.jks");
-            keystoreUtils.when(() -> KeystoreUtils.getKeyStoreFileLocation("foo.com")).thenReturn("foo-com.jks");
             mockOAuthServerConfiguration(oAuthServerConfiguration);
 
             // When the OAuth2Util is mocked, OAuthServerConfiguration instance should be available.
@@ -219,8 +213,13 @@ public class JwksEndpointTest {
                                 "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
 
                 keyStoreManager.when(() -> KeyStoreManager.getInstance(anyInt())).thenReturn(mockKeyStoreManager);
-                lenient().when(mockKeyStoreManager.getKeyStore("foo-com.jks")).thenReturn(
-                        getKeyStoreFromFile("foo-com.jks", "foo.com"));
+                lenient().when(mockKeyStoreManager.getKeyStore(anyString())).thenAnswer(invocation -> {
+                    String keyStoreName = invocation.getArgument(0);
+                    if ("foo-com.jks".equals(keyStoreName)) {
+                        return getKeyStoreFromFile("foo-com.jks", "foo.com");
+                    }
+                    return getKeyStoreFromFile("wso2carbon.jks", "wso2carbon");
+                });
                 lenient().when(mockKeyStoreManager.getPrimaryKeyStore()).thenReturn(
                         getKeyStoreFromFile("wso2carbon.jks", "wso2carbon"));
                 identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");

@@ -128,7 +128,18 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx, false);
         if ((userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
                 && (isLocalUser(requestMsgCtx.getAuthorizedUser())
-                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))) {
+                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))
+                || isOrganizationSSOUser(requestMsgCtx.getAuthorizedUser())) {
+            /*
+             * For Organization SSO logins, claims may change and existing caches
+             * (sub-organization and root/federated) are cleared.
+             *
+             * This ensures fresh claims are loaded from the user store when no cache
+             * exists or during an organization-switch grant.
+             *
+             * For cross-organization access, shared user ID and organization ID are
+             * set to enable correct claim resolution.
+             */
             if (log.isDebugEnabled()) {
                 log.debug("User attributes not found in cache against the access token or authorization code. " +
                         "Retrieving claims for local user: " + requestMsgCtx.getAuthorizedUser() + " from userstore.");
@@ -987,6 +998,15 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
            organization. */
         return authorizedUser.isFederatedUser() && userResidentOrganization != null && !userResidentOrganization.equals
                 (accessingOrganization);
+    }
+
+    /**
+     * Check whether the user is an organization SSO user.
+     * @param authenticatedUser
+     * @return
+     */
+    private boolean isOrganizationSSOUser(AuthenticatedUser authenticatedUser) {
+        return authenticatedUser.isFederatedUser() && authenticatedUser.getUserResidentOrganization() != null;
     }
 
     /**

@@ -1263,9 +1263,34 @@ public final class OAuthUtil {
             }
             clearAuthzCodeGrantCachesForTokens(accessTokenDOSet);
             clearAuthzCodeGrantCachesForCodes(authorizationCodeDOSet);
+
+            // Remove root organization federated user related caches if the user is an organization user.
+            if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                /*
+                In organization SSO flow, the tokens are stored against the user id of the federated user.
+                Therefore, we need to get the user id and set it in authenticated user to remove the caches.
+                 */
+                String userId = ((AbstractUserStoreManager) userStoreManager).getUser(null, userName).getUserID();
+                authenticatedUser.setUserName(userId);
+                // Use federated domain to fetch tokens for the root org user.
+                authenticatedUser.setUserStoreDomain(FEDERATED_USER_DOMAIN_PREFIX);
+                Set<AccessTokenDO> federatedAccessTokenDOSet = OAuthTokenPersistenceFactory.getInstance()
+                        .getAccessTokenDAO().getAccessTokensByUserForOpenidScope(authenticatedUser, true);
+                List<AuthzCodeDO> federatedAuthorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()
+                        .getAuthorizationCodeDAO()
+                        .getAuthorizationCodesByUserForOpenidScope(authenticatedUser);
+
+                clearAuthzCodeGrantCachesForTokens(federatedAccessTokenDOSet);
+                clearAuthzCodeGrantCachesForCodes(federatedAuthorizationCodeDOSet);
+
+            }
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = "Error occurred while retrieving access tokens issued for user : " +
                     LoggerUtils.getMaskedContent(userName);
+            LOG.error(errorMsg, e);
+        } catch (OrganizationManagementException e) {
+            String errorMsg = "Error occurred while retrieving access tokens issued for user : " +
+                    LoggerUtils.getMaskedContent(userName) + " from root organization";
             LOG.error(errorMsg, e);
         }
     }

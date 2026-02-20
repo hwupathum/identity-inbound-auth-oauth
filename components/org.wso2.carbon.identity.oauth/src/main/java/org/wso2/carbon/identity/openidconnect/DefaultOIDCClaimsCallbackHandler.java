@@ -72,6 +72,7 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
@@ -658,12 +659,18 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Check whether the user is an organization SSO user.
-     * @param authenticatedUser
-     * @return
+     * Determines whether the authenticated user is an organization SSO user.
+     * An organization SSO user is defined as a federated user with a defined resident organization
+     * where the organization IDP uses SSO authentication.
+     *
+     * @param authenticatedUser the authenticated user to evaluate
+     * @return {@code true} if the user meets all organization SSO criteria, {@code false} otherwise
      */
     private boolean isOrganizationSSOUser(AuthenticatedUser authenticatedUser) {
-        return authenticatedUser.isFederatedUser() && authenticatedUser.getUserResidentOrganization() != null;
+
+        return authenticatedUser.isFederatedUser()
+                && authenticatedUser.getUserResidentOrganization() != null
+                && authenticatedUser.getFederatedIdPName().equals(ORGANIZATION_LOGIN_IDP_NAME);
     }
 
     private boolean isOrganizationSwitchGrantType(OAuthTokenReqMessageContext requestMsgCtx) {

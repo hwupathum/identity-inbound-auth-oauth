@@ -47,11 +47,14 @@ import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
+import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Connection;
@@ -361,8 +364,8 @@ public class TestUtils {
         return jwt.serialize();
     }
 
-    public static Object[][] getRequestObjects(Key privateKey, Key privateKey2 , PublicKey publicKey, String
-            testClientId, String audience) throws Exception {
+    public static Object[][] getRequestObjects(Key privateKey, Key privateKey2 , PublicKey publicKey,
+                                               String testClientId, String audience) throws Exception {
 
         Map<String, Object> claims1 = new HashMap<>();
         Map<String, Object> claims2 = new HashMap<>();
@@ -462,5 +465,16 @@ public class TestUtils {
                         "algorithm NONE, signed and encrypted.", true, JWEAlgorithm.RSA_OAEP.toString(),
                         EncryptionMethod.A128GCM.toString()}
         };
+    }
+
+    public static String getEcCertificateContentBase64() throws Exception {
+
+        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        try (InputStream in = Files.newInputStream(
+                Paths.get("src/test/resources/keyStore/encryption/appKeystore.jks"))) {
+            ks.load(in, "wso2carbon".toCharArray());
+        }
+        Certificate cert = ks.getCertificate("wso2carbon_ec");
+        return java.util.Base64.getEncoder().encodeToString(cert.getEncoded());
     }
 }

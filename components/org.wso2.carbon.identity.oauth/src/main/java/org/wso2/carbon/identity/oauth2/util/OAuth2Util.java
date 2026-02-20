@@ -30,6 +30,7 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.ECDHEncrypter;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -126,6 +127,7 @@ import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
+import org.wso2.carbon.identity.oauth2.crypto.JWEEncryptor;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
@@ -183,6 +185,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
@@ -2752,6 +2755,10 @@ public class OAuth2Util {
         // Parse method returns a new JWEAlgorithm with requirement set to null if unknown algorithm name is passed.
         if (jweAlgorithm.getRequirement() != null) {
             return jweAlgorithm;
+        } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(jweAlgorithm)) {
+            return org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512;
+        } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(jweAlgorithm)) {
+            return org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384;
         } else {
             throw new IdentityOAuth2Exception("Unsupported Encryption Algorithm: " + encryptionAlgorithm);
         }
@@ -2970,7 +2977,7 @@ public class OAuth2Util {
     }
 
     /**
-     * This is the generic Encryption function which calls algorithm specific encryption function
+     * This is the generic Encryption function for RSA and ECDH algorithms
      * depending on the algorithm name.
      *
      * @param jwtClaimsSet        JwtClaimsSet to encrypt
@@ -2987,13 +2994,17 @@ public class OAuth2Util {
                                  String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
-        if (isRSAAlgorithm(encryptionAlgorithm)) {
+        if (isSupportedAlgorithm(encryptionAlgorithm)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Signing JWT before encryption using the algorithm: %s ."
                         , signatureAlgorithm));
             }
             SignedJWT signedJwt = (SignedJWT) OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain);
-            return encryptWithRSA(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Encrypting JWT using encryption algorithm: %s ."
+                        , encryptionAlgorithm));
+            }
+            return encryptWithSPCertificate(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
         } else {
             throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
                     " is not supported");
@@ -3009,7 +3020,8 @@ public class OAuth2Util {
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
-     * @deprecated replaced by {@link #encryptWithRSA(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
+     * @deprecated replaced by {@link #encryptWithSPCertificate(SignedJWT, JWEAlgorithm, EncryptionMethod, String,
+     *                                                          String)}
      */
     @Deprecated
     private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
@@ -3048,16 +3060,16 @@ public class OAuth2Util {
     }
 
     /**
-     * Encrypt JWT id token using RSA algorithm.
+     * Encrypt JWT id token using supported RSA or ECDH algorithm.
      *
      * @param signedJwt           contains signed JWT body
-     * @param encryptionAlgorithm JWT signing algorithm
-     * @param spTenantDomain      Service provider tenant domain
+     * @param encryptionAlgorithm JWT encryption algorithm
+     * @param encryptionMethod    JWT encryption method
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
      */
-    private static JWT encryptWithRSA(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
+    private static JWT encryptWithSPCertificate(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
                                       EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
@@ -3292,11 +3304,12 @@ public class OAuth2Util {
     }
 
     /**
-     * Encrypt the JWT token with with given public key.
+     * Encrypt the JWT token with given public key using relevant encryptor.
      *
      * @param publicKey           public key used to encrypt
      * @param signedJwt           contains signed JWT body
-     * @param encryptionAlgorithm JWT signing algorithm
+     * @param encryptionAlgorithm JWT encryption algorithm
+     * @param encryptionMethod    JWT encryption Method
      * @param spTenantDomain      Service provider tenant domain
      * @param clientId            ID of the client
      * @param kid                 value used as 'kid'
@@ -3318,8 +3331,9 @@ public class OAuth2Util {
             JWEHeader header = headerBuilder.build();
 
             JWEObject jweObject = new JWEObject(header, new Payload(signedJwt));
-            // Encrypt with the recipient's public key.
-            jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
+
+            // Encrypt with the recipient's public key validating the encrypter type
+            jweObject.encrypt(validateEncrypterMode(encryptionAlgorithm, publicKey));
 
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(jweObject.serialize());
 
@@ -3333,6 +3347,34 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
                     + " with the tenant domain: " + spTenantDomain, e);
         }
+    }
+
+    /**
+     * Validate and get the Encrypter type.
+     *
+     * @param encryptionAlgorithm SP configured Encryption Algorithm
+     * @param publicKey           public key
+     * @return JWEEncrypter       encrypter type
+     * @throws JOSEException
+     */
+    private static JWEEncrypter validateEncrypterMode(JWEAlgorithm encryptionAlgorithm, Key publicKey)
+            throws JOSEException {
+
+        // Use built-in Nimbus Encryptor for supported algorithms
+        if (JWEAlgorithm.RSA_OAEP.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.RSA1_5.equals(encryptionAlgorithm)
+                || JWEAlgorithm.RSA_OAEP_256.equals(encryptionAlgorithm)) {
+            return new RSAEncrypter((RSAPublicKey) publicKey);
+            // Use Bouncy castle based Encryptor for RSA-384, 512 algorithms
+        } else if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(encryptionAlgorithm) ||
+                org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(encryptionAlgorithm)) {
+            return new JWEEncryptor((RSAPublicKey) publicKey);
+        } else if (JWEAlgorithm.ECDH_ES_A256KW.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A192KW.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A128KW.equals(encryptionAlgorithm)) {
+            return new ECDHEncrypter((ECPublicKey) publicKey);
+        }
+        return new RSAEncrypter((RSAPublicKey) publicKey);
     }
 
     /**
@@ -3640,11 +3682,20 @@ public class OAuth2Util {
                 JWEAlgorithm.RSA_OAEP_256.equals(algorithm));
     }
 
+    private static boolean isSupportedAlgorithm(JWEAlgorithm algorithm) {
+
+        return (JWEAlgorithm.ECDH_ES_A128KW.equals(algorithm) || JWEAlgorithm.ECDH_ES_A192KW.equals(algorithm) ||
+                JWEAlgorithm.ECDH_ES_A256KW.equals(algorithm) || JWEAlgorithm.RSA_OAEP.equals(algorithm) ||
+                JWEAlgorithm.RSA1_5.equals(algorithm) || JWEAlgorithm.RSA_OAEP_256.equals(algorithm) ||
+                org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.equals(algorithm)
+                || org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_512.equals(algorithm));
+    }
+
     /**
-     * Method to obatin Default Signing certificate for the tenant.
+     * Method to obtain Default Signing certificate for the tenant.
      *
      * @param tenantDomain Tenant Domain as a String.
-     * @param tenantId     Tenan ID as an integer.
+     * @param tenantId     Tenant ID as an integer.
      * @return Default Signing Certificate of the tenant domain.
      * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
      */

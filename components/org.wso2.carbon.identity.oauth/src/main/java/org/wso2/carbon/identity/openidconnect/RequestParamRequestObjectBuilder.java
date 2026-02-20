@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObject;
+import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.RSADecrypter;
@@ -37,12 +38,14 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.crypto.JWEDecryptor;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.security.Key;
+import java.security.PrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 
@@ -120,8 +123,10 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                     throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
                 }
             }
-            RSAPrivateKey rsaPrivateKey = getRSAPrivateKey(oAuth2Parameters);
-            RSADecrypter decrypter = new RSADecrypter(rsaPrivateKey);
+            // TO-DO: need to support ECDH Key pair
+            PrivateKey privateKey = getRSAPrivateKey(oAuth2Parameters);
+            JWEDecrypter decrypter = validateDecryptorMode(oAuthAppDO.getRequestObjectEncryptionAlgorithm(),
+                    privateKey);
             encryptedJWT.decrypt(decrypter);
 
             JWEObject jweObject = JWEObject.parse(requestObject);
@@ -141,6 +146,29 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
         }
+    }
+
+    /**
+     * Validate and get the Decrypter type.
+     *
+     * @param encryptionAlgorithm SP configured Encryption Algorithm
+     * @param privateKey          Private key
+     * @return Decrypter          decryptor type
+     * @throws JOSEException      Jose exception while creating decryptor
+     */
+    private JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
+            throws JOSEException {
+
+        /// Use Bouncy castle based Decryptor for RSA-384, 512 algorithms
+        if (org.wso2.carbon.identity.oauth2.crypto.JWEAlgorithm.RSA_OAEP_384.getName().equals(
+                encryptionAlgorithm) || org.wso2.carbon.identity.oauth2.crypto
+                .JWEAlgorithm.RSA_OAEP_512.getName().equals(encryptionAlgorithm)) {
+            return new JWEDecryptor(privateKey);
+        }
+        if (encryptionAlgorithm == null) {
+            log.debug("Request Object Encryption Algorithm is not found.");
+        }
+        return new RSADecrypter(privateKey);
     }
 
     protected boolean isEncrypted(String requestObject) {

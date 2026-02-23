@@ -152,8 +152,25 @@ public class AuthorizationGrantCache extends
      * @param key Key to clear cache.
      */
     public void clearCacheEntryByTokenId(AuthorizationGrantCacheKey key, String tokenId) {
+
         super.clearCacheEntry(key);
         clearFromSessionStore(tokenId);
+    }
+
+    /**
+     * Clears a cache entry by tokenId and tenant domain
+     *
+     * @param key Key to clear cache.
+     */
+    public void clearCacheEntryByTokenIdWithTenantDomain(AuthorizationGrantCacheKey key, String tokenId,
+                                                         String tenantDomain) {
+
+        if (tenantDomain != null) {
+            super.clearCacheEntry(key, tenantDomain);
+            clearFromSessionStore(tokenId);
+        } else {
+            this.clearCacheEntryByTokenId(key, tokenId);
+        }
     }
 
     /**
@@ -215,7 +232,7 @@ public class AuthorizationGrantCache extends
     }
 
     /**
-     * Clears a cache entry by authorization code Id.
+     * Clears a cache entry by authorization code Id
      *
      * @param key         Key to clear cache
      * @param authzCodeId AuthorizationCodeId
@@ -224,6 +241,23 @@ public class AuthorizationGrantCache extends
 
         super.clearCacheEntry(key);
         clearFromSessionStore(authzCodeId);
+    }
+
+    /**
+     * Clears a cache entry by authorization code Id and tenant domain.
+     *
+     * @param key         Key to clear cache
+     * @param authzCodeId AuthorizationCodeId
+     */
+    public void clearCacheEntryByCodeIdWithTenantDomain(AuthorizationGrantCacheKey key, String authzCodeId,
+                                                        String tenantDomain) {
+
+        if (tenantDomain != null) {
+            super.clearCacheEntry(key, tenantDomain);
+            clearFromSessionStore(authzCodeId);
+        } else {
+            this.clearCacheEntryByCodeId(key, authzCodeId);
+        }
     }
 
     /**

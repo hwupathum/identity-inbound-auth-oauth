@@ -1309,7 +1309,7 @@ public final class OAuthUtil {
                 String authorizationCode = authorizationCodeDO.getAuthorizationCode();
                 String authzCodeId = authorizationCodeDO.getAuthzCodeId();
                 AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
-                AuthorizationGrantCache.getInstance().clearCacheEntryByCodeIdWithTenantDomain(cacheKey, authzCodeId,
+                AuthorizationGrantCache.getInstance().clearCacheEntryByCodeId(cacheKey, authzCodeId,
                         tenantDomain);
             }
         }
@@ -1326,7 +1326,7 @@ public final class OAuthUtil {
                 String accessToken = accessTokenDO.getAccessToken();
                 String tokenId = accessTokenDO.getTokenId();
                 AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
-                AuthorizationGrantCache.getInstance().clearCacheEntryByTokenIdWithTenantDomain(cacheKey, tokenId,
+                AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(cacheKey, tokenId,
                         tenantDomain);
             }
         }

@@ -129,8 +129,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx, false);
         if ((userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
                 && (isLocalUser(requestMsgCtx.getAuthorizedUser())
-                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))
-                || isOrganizationSSOUser(requestMsgCtx.getAuthorizedUser())) {
+                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser())
+                || isOrganizationSSOUser(requestMsgCtx.getAuthorizedUser()))) {
             /*
              * For Organization SSO logins, claims may change and existing caches
              * (sub-organization and root/federated) are cleared.

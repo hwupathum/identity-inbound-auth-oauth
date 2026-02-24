@@ -161,9 +161,9 @@ public class AuthorizationGrantCache extends
      * Clears a cache entry by tokenId and tenant domain
      *
      * @param key Key to clear cache.
+     * @param tenantDomain Tenant domain of the cache entry to clear
      */
-    public void clearCacheEntryByTokenId(AuthorizationGrantCacheKey key, String tokenId,
-                                                         String tenantDomain) {
+    public void clearCacheEntryByTokenId(AuthorizationGrantCacheKey key, String tokenId, String tenantDomain) {
 
         if (tenantDomain != null) {
             super.clearCacheEntry(key, tenantDomain);
@@ -232,7 +232,7 @@ public class AuthorizationGrantCache extends
     }
 
     /**
-     * Clears a cache entry by authorization code Id
+     * Clears a cache entry by authorization code Id.
      *
      * @param key         Key to clear cache
      * @param authzCodeId AuthorizationCodeId
@@ -248,9 +248,9 @@ public class AuthorizationGrantCache extends
      *
      * @param key         Key to clear cache
      * @param authzCodeId AuthorizationCodeId
+     * @param tenantDomain Tenant domain of the cache entry to clear
      */
-    public void clearCacheEntryByCodeId(AuthorizationGrantCacheKey key, String authzCodeId,
-                                                        String tenantDomain) {
+    public void clearCacheEntryByCodeId(AuthorizationGrantCacheKey key, String authzCodeId, String tenantDomain) {
 
         if (tenantDomain != null) {
             super.clearCacheEntry(key, tenantDomain);

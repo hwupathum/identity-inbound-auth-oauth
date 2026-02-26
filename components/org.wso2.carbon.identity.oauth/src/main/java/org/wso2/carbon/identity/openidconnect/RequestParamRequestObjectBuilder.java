@@ -20,17 +20,18 @@ package org.wso2.carbon.identity.openidconnect;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObject;
 import com.nimbusds.jose.JWEDecrypter;
+import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
-import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -50,6 +51,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.JWT_PART_DELIMITER;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.NUMBER_OF_PARTS_IN_JWE;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.NUMBER_OF_PARTS_IN_JWS;
@@ -109,42 +111,86 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         EncryptedJWT encryptedJWT;
         try {
             encryptedJWT = EncryptedJWT.parse(requestObject);
-            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(
-                    oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
-            if (StringUtils.isNotEmpty(oAuthAppDO.getRequestObjectEncryptionAlgorithm())) {
-                if (!encryptedJWT.getHeader().getAlgorithm().toString()
-                        .equals(oAuthAppDO.getRequestObjectEncryptionAlgorithm())) {
-                    String errorMessage = "Invalid request object encryption algorithm.";
-                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
-                }
-                if (!encryptedJWT.getHeader().getEncryptionMethod().toString()
-                        .equals(oAuthAppDO.getRequestObjectEncryptionMethod())) {
-                    String errorMessage = "Invalid request object encryption method.";
-                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
-                }
+
+            // When using an encrypted request object for par endpoint, client id and tenant domain may not be
+            // available in the oauth2 parameters.
+            if (StringUtils.isBlank(oAuth2Parameters.getTenantDomain())) {
+                oAuth2Parameters.setTenantDomain(
+                        PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+            }
+            String applicationRequestObjectEncryptionAlgorithm;
+            if (StringUtils.isNotBlank(oAuth2Parameters.getClientId())) {
+                // If client id is available in the oauth2 parameters, validate encryption algorithm and method.
+                validateEncryptionAlgorithmAndMethod(encryptedJWT.getHeader(), oAuth2Parameters.getClientId(),
+                        oAuth2Parameters.getTenantDomain());
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(
+                        oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
+                applicationRequestObjectEncryptionAlgorithm = oAuthAppDO.getRequestObjectEncryptionAlgorithm();
+            } else {
+                applicationRequestObjectEncryptionAlgorithm = encryptedJWT.getHeader().getAlgorithm().getName();
             }
             // TO-DO: need to support ECDH Key pair
             PrivateKey privateKey = getRSAPrivateKey(oAuth2Parameters);
-            JWEDecrypter decrypter = validateDecryptorMode(oAuthAppDO.getRequestObjectEncryptionAlgorithm(),
+            JWEDecrypter decrypter = validateDecryptorMode(applicationRequestObjectEncryptionAlgorithm,
                     privateKey);
             encryptedJWT.decrypt(decrypter);
 
             JWEObject jweObject = JWEObject.parse(requestObject);
             jweObject.decrypt(decrypter);
-
+            String requestObjectString;
             if (jweObject.getPayload() != null && jweObject.getPayload().toString()
                     .split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWS) {
-                return jweObject.getPayload().toString();
+                requestObjectString = jweObject.getPayload().toString();
             } else {
-                return new PlainJWT((JWTClaimsSet) encryptedJWT.getJWTClaimsSet()).serialize();
+                requestObjectString = new PlainJWT(encryptedJWT.getJWTClaimsSet()).serialize();
             }
 
+            if (StringUtils.isBlank(oAuth2Parameters.getClientId())) {
+                // Retrieve client id from the decrypted request object to validate encryption algorithm and method.
+                RequestObject populatedRequestObject = new RequestObject();
+                setRequestObjectValues(requestObjectString, populatedRequestObject);
+                String clientId = populatedRequestObject.getClaimValue(CLIENT_ID);
+                if (StringUtils.isBlank(clientId)) {
+                    String errorMessage = "Client ID is not found in the decrypted request object.";
+                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
+                }
+                validateEncryptionAlgorithmAndMethod(encryptedJWT.getHeader(), clientId,
+                        oAuth2Parameters.getTenantDomain());
+            }
+            return requestObjectString;
         } catch (JOSEException | IdentityOAuth2Exception | ParseException | InvalidOAuthClientException e) {
             String errorMessage = "Failed to decrypt Request Object";
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage + " from " + requestObject, e);
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
+        }
+    }
+
+    /**
+     * Validate the encryption algorithm and method of the request object JWE header against application's configured
+     * encryption algorithm and method.
+     *
+     * @param jweHeader    JWE Header.
+     * @param clientId     Client Id.
+     * @param tenantDomain Tenant Domain.
+     * @throws RequestObjectException      If validation fails.
+     * @throws IdentityOAuth2Exception     If an error occurs while retrieving application information.
+     * @throws InvalidOAuthClientException If the client id is invalid.
+     */
+    private void validateEncryptionAlgorithmAndMethod(JWEHeader jweHeader, String clientId, String tenantDomain)
+            throws RequestObjectException, IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        if (StringUtils.isNotBlank(oAuthAppDO.getRequestObjectEncryptionAlgorithm())) {
+            if (!jweHeader.getAlgorithm().toString().equals(oAuthAppDO.getRequestObjectEncryptionAlgorithm())) {
+                String errorMessage = "Invalid request object encryption algorithm.";
+                throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
+            }
+            if (!jweHeader.getEncryptionMethod().toString().equals(oAuthAppDO.getRequestObjectEncryptionMethod())) {
+                String errorMessage = "Invalid request object encryption method.";
+                throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
+            }
         }
     }
 

@@ -168,8 +168,8 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
     }
 
     /**
-     * Validate the encryption algorithm and method of the request object JWE header against application's configured
-     * encryption algorithm and method.
+     * Validate the encryption algorithm and method of the request object JWE header against the application's
+     * configured encryption algorithm and method.
      *
      * @param jweHeader    JWE Header.
      * @param clientId     Client Id.

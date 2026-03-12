@@ -54,19 +54,17 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.lang.reflect.Field;
-import java.security.Key;
-import java.security.cert.Certificate;
+import java.security.PrivateKey;
+import java.security.interfaces.RSAPrivateKey;
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
-import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
 
 @WithCarbonHome
 @WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID,
@@ -148,7 +146,8 @@ public class JWTTokenGeneratorTest {
     public void testGenerateToken() throws Exception {
 
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OAuth2Util> oauth2Util = mockStatic(OAuth2Util.class, CALLS_REAL_METHODS)) {
             PrivilegedCarbonContext.startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -164,17 +163,23 @@ public class JWTTokenGeneratorTest {
             addSampleOauth2Application();
             ClaimCache claimsLocalCache = ClaimCache.getInstance();
             setPrivateField(jwtTokenGenerator, "claimsLocalCache", claimsLocalCache);
-            Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
-            publicCerts.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                    .getCertificate("wso2carbon"));
             OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
             when(realmService.getTenantManager()).thenReturn(tenantManager);
-            setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
-            Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
-            privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                    .getKey("wso2carbon", "wso2carbon".toCharArray()));
-            setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
+            PrivateKey privateKey = (RSAPrivateKey) ReadCertStoreSampleUtil.createKeyStore(getClass())
+                    .getKey("wso2carbon", "wso2carbon".toCharArray());
+            JWSAlgorithm alg = new JWSAlgorithm("RS256");
 
+            oauth2Util.when(() -> OAuth2Util.getTenantId("carbon.super"))
+                    .thenReturn(-1234);
+            oauth2Util.when(() -> OAuth2Util.getTenantDomain(-1234))
+                    .thenReturn("carbon.super");
+            oauth2Util.when(() -> OAuth2Util.getPrivateKey("wso2carbon", -1234))
+                    .thenReturn(privateKey);
+            oauth2Util.when(() -> OAuth2Util.getCertificate("carbon.super", -1234))
+                    .thenReturn(ReadCertStoreSampleUtil.createKeyStore(getClass())
+                            .getCertificate("wso2carbon"));
+            oauth2Util.when(() -> OAuth2Util.getSigningPrivateKey("carbon.super", alg))
+                    .thenReturn(privateKey);
             accessToken.setTokenType("Bearer");
             oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
 

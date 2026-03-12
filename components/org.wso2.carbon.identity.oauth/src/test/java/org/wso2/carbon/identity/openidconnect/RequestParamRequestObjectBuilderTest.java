@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.JWEAlgorithm;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -127,13 +128,15 @@ public class RequestParamRequestObjectBuilderTest {
 //        MockedStatic<RequestObjectValidatorImpl> requestObjectValidator =
 //                mockStatic(RequestObjectValidatorImpl.class);
 //        spy(RequestObjectValidatorImpl.class);
-
+                JWEAlgorithm alg = new JWEAlgorithm(encryptionAlgo);
                 rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
                 oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
                 oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
                 oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1,
                                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                         .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
+                oAuth2Util.when(() -> OAuth2Util.getEncryptionPrivateKey("carbon.super", alg))
+                        .thenReturn(rsaPrivateKey);
 
                 OAuthAppDO oAuthAppDO = new OAuthAppDO();
                 oAuthAppDO.setRequestObjectEncryptionMethod(encryptionMethod);

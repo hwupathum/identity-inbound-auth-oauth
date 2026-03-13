@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.MockedStatic;
@@ -65,6 +67,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -232,7 +235,7 @@ public class RequestObjectValidatorImplTest {
             RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
             when((mockServerConfiguration.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, CALLS_REAL_METHODS)) {
 
                 OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
                 oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
@@ -256,10 +259,12 @@ public class RequestObjectValidatorImplTest {
                 doNothing().when(eventServiceMock).handleEvent(any());
 
                 rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+                JWEAlgorithm alg = new JWEAlgorithm("RS256");
 
                 oAuth2Util.when(() -> OAuth2Util.getTenantId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(SUPER_TENANT_ID);
                 oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
-
+                oAuth2Util.when(() -> OAuth2Util.getEncryptionPrivateKey("carbon.super", alg))
+                        .thenReturn(rsaPrivateKey);
                 // Mock OAuth2Util returning public cert of the service provider
                 oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
                         .thenReturn(clientKeyStore.getCertificate(CLIENT_PUBLIC_CERT_ALIAS));
@@ -279,6 +284,13 @@ public class RequestObjectValidatorImplTest {
                                         "IdPEntityId")).thenReturn(property);
                 OAuthAppDO appDO = spy(new OAuthAppDO());
                 appDO.setRequestObjectSignatureAlgorithm("RS256");
+                if (isEncrypted && !isSigned) {
+                    appDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP.toString());
+                    appDO.setRequestObjectEncryptionMethod(EncryptionMethod.A128GCM.toString());
+                } else if (isSigned && isEncrypted) {
+                    appDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP_256.toString());
+                    appDO.setRequestObjectEncryptionMethod(EncryptionMethod.A256GCM.toString());
+                }
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                         .thenReturn(appDO);
                 oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))

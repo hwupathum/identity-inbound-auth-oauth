@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.mockito.Mock;
@@ -156,7 +158,9 @@ public class OIDCRequestObjectUtilTest {
                                 () -> IdentityUtil.getPropertyAsList(TestConstants.FAPI_SIGNATURE_ALG_CONFIGURATION))
                         .thenReturn(Arrays.asList(JWSAlgorithm.PS256.getName(), JWSAlgorithm.ES256.getName(),
                                 JWSAlgorithm.RS256.getName()));
-
+                JWEAlgorithm alg = new JWEAlgorithm(encryptionAlgo);
+                oAuth2Util.when(() -> OAuth2Util.getEncryptionPrivateKey("carbon.super", alg))
+                        .thenReturn(rsaPrivateKey);
                 oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
                 oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
                 oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1,
@@ -167,6 +171,13 @@ public class OIDCRequestObjectUtilTest {
 
                 OAuthAppDO oAuthAppDO = new OAuthAppDO();
                 oAuthAppDO.setRequestObjectSignatureValidationEnabled(isFAPITest);
+                if (isEncrypted && !isSigned) {
+                    oAuthAppDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP.toString());
+                    oAuthAppDO.setRequestObjectEncryptionMethod(EncryptionMethod.A128GCM.toString());
+                } else if (isSigned && isEncrypted) {
+                    oAuthAppDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP_256.toString());
+                    oAuthAppDO.setRequestObjectEncryptionMethod(EncryptionMethod.A256GCM.toString());
+                }
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(TEST_CLIENT_ID_1)).thenReturn(oAuthAppDO);
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                         .thenReturn(oAuthAppDO);

@@ -31,6 +31,7 @@ import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.ECDHEncrypter;
+import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -180,11 +181,13 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -211,6 +214,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.core.util.KeyStoreUtil.getTenantECKeyAlias;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
@@ -3408,13 +3412,14 @@ public class OAuth2Util {
         if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.RS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.RS512.equals(signatureAlgorithm) || JWSAlgorithm.PS256.equals(signatureAlgorithm)) {
             return signJWTWithRSA(jwtClaimsSet, signatureAlgorithm, tenantDomain);
+        } else if (JWSAlgorithm.ES256.equals(signatureAlgorithm)) {
+            return signJWTWithEC(jwtClaimsSet, signatureAlgorithm, tenantDomain);
         } else if (JWSAlgorithm.HS256.equals(signatureAlgorithm) || JWSAlgorithm.HS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.HS512.equals(signatureAlgorithm)) {
             // return signWithHMAC(jwtClaimsSet,jwsAlgorithm,request); implementation need to be done
             throw new RuntimeException("Provided signature algorithm: " + signatureAlgorithm +
                     " is not supported");
         } else {
-            // return signWithEC(jwtClaimsSet,jwsAlgorithm,request); implementation need to be done
             throw new RuntimeException("Provided signature algorithm: " + signatureAlgorithm +
                     " is not supported");
         }
@@ -3447,7 +3452,7 @@ public class OAuth2Util {
             }
 
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            Key privateKey = getPrivateKey(tenantDomain, tenantId);
+            Key privateKey = OAuth2Util.getSigningPrivateKey(tenantDomain, signatureAlgorithm);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             headerBuilder.keyID(getKID(getCertificate(tenantDomain, tenantId), signatureAlgorithm, tenantDomain));
@@ -3476,6 +3481,50 @@ public class OAuth2Util {
                     String certThumbPrint = OAuth2Util.getThumbPrint(certificate, false);
                     headerBuilder.x509CertSHA256Thumbprint(new Base64URL(certThumbPrint));
                 }
+            }
+            SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
+            signedJWT.sign(signer);
+            return signedJWT;
+        } catch (JOSEException e) {
+            throw new IdentityOAuth2Exception("Error occurred while signing JWT", e);
+        }
+    }
+
+    /**
+     * sign JWT token with EC algorithm
+     *
+     * @param jwtClaimsSet       contains JWT body
+     * @param signatureAlgorithm JWT signing algorithm
+     * @param tenantDomain       tenant domain
+     * @return signed JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    private static JWT signJWTWithEC(JWTClaimsSet jwtClaimsSet, JWSAlgorithm signatureAlgorithm, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            if (StringUtils.isBlank(tenantDomain)) {
+                tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+                if (log.isDebugEnabled()) {
+                    log.debug("Assign super tenant domain as signing domain.");
+                }
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("Signing JWT using the algorithm: " + signatureAlgorithm + " & key of the tenant: " +
+                        tenantDomain);
+            }
+
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            Key privateKey = OAuth2Util.getSigningPrivateKey(tenantDomain, signatureAlgorithm);
+            JWSSigner signer = new ECDSASigner((ECPrivateKey) privateKey);
+            JWSHeader.Builder headerBuilder = new JWSHeader.Builder(signatureAlgorithm);
+            headerBuilder.keyID(getKID(getCertificate(tenantDomain, tenantId), signatureAlgorithm, tenantDomain));
+            if (isJWTX5tHexifyingRequired()) {
+                headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
+            } else {
+                Certificate certificate = getCertificate(tenantDomain, tenantId);
+                headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrintWithPrevAlgorithm(certificate, false)));
             }
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
@@ -3521,6 +3570,108 @@ public class OAuth2Util {
             privateKey = privateKeys.get(tenantId);
         }
         return privateKey;
+    }
+
+    /**
+     * Returns the tenant private key required for JWT signing.
+     *
+     * @param tenantDomain tenant domain
+     * @param alg          JWT signing algorithm
+     * @return signing private key
+     * @throws IdentityOAuth2Exception if key resolution fails
+     */
+    public static Key getSigningPrivateKey(String tenantDomain, JWSAlgorithm alg)
+            throws IdentityOAuth2Exception {
+
+        int tenantId = OAuth2Util.getTenantId(tenantDomain);
+        KeyRequirementType req = AlgorithmKeyMapping.signing(alg);
+
+        return getPrivateKeyForRequirement(tenantDomain, tenantId, req);
+    }
+
+    /**
+     * Returns the tenant private key required for JWT encryption.
+     *
+     * @param tenantDomain tenant domain
+     * @param alg          JWT encryption algorithm
+     * @return encryption private key
+     * @throws IdentityOAuth2Exception if key resolution fails
+     */
+    public static PrivateKey getEncryptionPrivateKey(String tenantDomain, JWEAlgorithm alg)
+            throws IdentityOAuth2Exception {
+
+        int tenantId = OAuth2Util.getTenantId(tenantDomain);
+        KeyRequirementType req = AlgorithmKeyMapping.encryption(alg);
+
+        return getPrivateKeyForRequirement(tenantDomain, tenantId, req);
+    }
+
+    /**
+     * Resolves the tenant private key based on the required key type.
+     *
+     * @param tenantDomain tenant domain
+     * @param tenantId     tenant id
+     * @param req          key requirement
+     * @return resolved private key
+     * @throws IdentityOAuth2Exception if key retrieval fails
+     */
+    private static PrivateKey getPrivateKeyForRequirement(String tenantDomain, int tenantId,
+                                                          KeyRequirementType req) throws IdentityOAuth2Exception {
+
+        try {
+            IdentityTenantUtil.initializeRegistry(tenantId);
+        } catch (IdentityException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error occurred while loading registry for tenant " + tenantDomain, e);
+        }
+
+        KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
+
+        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+
+            try {
+                if (KeyRequirementType.KeyType.EC.equals(req.getKeyType())) {
+                    String alias = getTenantECKeyAlias(tenantDomain);
+                    return tenantKSM.getDefaultPrivateKey(alias);
+                }
+                return tenantKSM.getDefaultPrivateKey();
+            } catch (Exception e) {
+                throw new IdentityOAuth2Exception(
+                        "Error while obtaining private key for super tenant", e);
+            }
+        }
+
+        try {
+            String keyStoreName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
+            String alias = resolveTenantKeyAlias(tenantDomain, req);
+            return (PrivateKey) tenantKSM.getPrivateKey(keyStoreName, alias);
+        } catch (Exception e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving private key for tenant: "
+                    + tenantDomain + ". Requirement: " + req.getKeyType() + " key type", e);
+        }
+    }
+
+    /**
+     * Resolves the tenant key alias based on the required key type.
+     *
+     * @param tenantDomain tenant domain
+     * @param req          key requirement
+     * @return tenant key alias
+     * @throws IdentityOAuth2Exception if alias resolution fails
+     */
+    private static String resolveTenantKeyAlias(String tenantDomain, KeyRequirementType req)
+            throws IdentityOAuth2Exception {
+
+        if (KeyRequirementType.KeyType.RSA.equals(req.getKeyType())) {
+            return tenantDomain;
+        }
+
+        try {
+            return getTenantECKeyAlias(tenantDomain);
+        } catch (Exception e) {
+            throw new IdentityOAuth2Exception("Failed to resolve tenant EC key alias for tenant domain "
+                    + tenantDomain, e);
+        }
     }
 
     /**

@@ -47,8 +47,6 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
@@ -87,7 +85,6 @@ public class JwksEndpointTest {
     private static final JSONArray X5T_ARRAY = new JSONArray();
     private static final String ENABLE_X5C_IN_RESPONSE = "JWTValidatorConfigs.JWKSEndpoint.EnableX5CInResponse";
     private JwksEndpoint jwksEndpoint;
-    private Object identityUtilObj;
 
     @BeforeTest
     public void setUp() throws Exception {
@@ -97,9 +94,6 @@ public class JwksEndpointTest {
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
                           );
         jwksEndpoint = new JwksEndpoint();
-
-        Class<?> clazz = IdentityUtil.class;
-        identityUtilObj = clazz.newInstance();
         OAuth2ServiceComponentHolder.setKeyIDProvider(new DefaultKeyIDProviderImpl());
 
         X5C_ARRAY.put("MIIDdzCCAl+gAwIBAgIEdWyfgTANBgkqhkiG9w0BAQsFADBsMRAwDgYDVQQGEwdVbmtub3duMRAwDgYDVQQIEwdVbmtub3" +
@@ -167,24 +161,13 @@ public class JwksEndpointTest {
                 };
 
                 threadLocalProperties.get().put(OAuthConstants.TENANT_NAME_FROM_CONTEXT, tenantDomain);
-
-                Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
-                Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-                getDeclaredFields0.setAccessible(true);
-                Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-                Field modifiers = null;
-                for (Field each : fields) {
-                    if ("modifiers".equals(each.getName())) {
-                        modifiers = each;
-                        break;
-                    }
-                }
-                modifiers.setAccessible(true);
-                modifiers.setInt(threadLocalPropertiesField,
-                        threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
-
+                Field threadLocalPropertiesField = IdentityUtil.class.getDeclaredField("threadLocalProperties");
                 threadLocalPropertiesField.setAccessible(true);
-                threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
+
+                @SuppressWarnings("unchecked")
+                ThreadLocal<Map<String, Object>> existingThreadLocal =
+                        (ThreadLocal<Map<String, Object>>) threadLocalPropertiesField.get(null);
+                existingThreadLocal.set(threadLocalProperties.get());
 
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(tenantId);
 
@@ -259,8 +242,7 @@ public class JwksEndpointTest {
                         fail("Unexpected exception: " + e.getMessage());
                     }
                 }
-
-                threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+                existingThreadLocal.remove();
             }
         }
     }

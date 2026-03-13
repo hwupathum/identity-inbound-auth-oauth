@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
@@ -170,6 +171,13 @@ public class OIDCRequestObjectUtilTest {
 
                 OAuthAppDO oAuthAppDO = new OAuthAppDO();
                 oAuthAppDO.setRequestObjectSignatureValidationEnabled(isFAPITest);
+                if (isEncrypted && !isSigned) {
+                    oAuthAppDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP.toString());
+                    oAuthAppDO.setRequestObjectEncryptionMethod(EncryptionMethod.A128GCM.toString());
+                } else if (isSigned && isEncrypted) {
+                    oAuthAppDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP_256.toString());
+                    oAuthAppDO.setRequestObjectEncryptionMethod(EncryptionMethod.A256GCM.toString());
+                }
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(TEST_CLIENT_ID_1)).thenReturn(oAuthAppDO);
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                         .thenReturn(oAuthAppDO);

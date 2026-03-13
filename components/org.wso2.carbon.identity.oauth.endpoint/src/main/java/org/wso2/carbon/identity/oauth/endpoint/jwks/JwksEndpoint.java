@@ -170,9 +170,9 @@ public class JwksEndpoint {
             JWSAlgorithm accessTokenSignAlgorithm =
                     OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getSignatureAlgorithm());
             // If we read different algorithms from identity.xml then put them in a list.
-            algs = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
-            for (JWSAlgorithm configuredAlg : algs) {
-                if (JWSAlgorithm.Family.RSA.contains(configuredAlg)) {
+            List<JWSAlgorithm> configuredAlgs = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
+            for (JWSAlgorithm configuredAlg : configuredAlgs) {
+                if (JWSAlgorithm.Family.RSA.contains(configuredAlg) && !algs.contains(configuredAlg)) {
                     algs.add(configuredAlg);
                 }
             }

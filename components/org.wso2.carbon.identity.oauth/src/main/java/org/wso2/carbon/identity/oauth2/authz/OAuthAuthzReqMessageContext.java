@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.authz;
 
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 
 import java.io.Serializable;
 import java.util.Properties;
@@ -60,6 +61,10 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private AuthorizationDetails approvedAuthorizationDetails;
 
     private AuthorizationDetails requestedAuthorizationDetails;
+
+    private boolean isPreIssueIDTokenActionExecuted;
+
+    private IDTokenDTO preIssueIDTokenActionDTO;
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
 
@@ -260,5 +265,49 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setRequestedAuthorizationDetails(final AuthorizationDetails requestedAuthorizationDetails) {
 
         this.requestedAuthorizationDetails = requestedAuthorizationDetails;
+    }
+
+    /**
+     * Checks whether the pre issue ID token action has been executed.
+     *
+     * @return {@code true} if the pre issue ID token action has been executed, {@code false} otherwise.
+     */
+    public boolean isPreIssueIDTokenActionExecuted() {
+
+        return isPreIssueIDTokenActionExecuted;
+    }
+
+    /**
+     * Sets the flag indicating whether the pre issue ID token action has been executed.
+     *
+     * @param isPreIssueIDTokenActionExecuted {@code true} if the pre issue ID token action has been executed,
+     *                                        {@code false} otherwise.
+     */
+    public void setPreIssueIDTokenActionExecuted(boolean isPreIssueIDTokenActionExecuted) {
+
+        this.isPreIssueIDTokenActionExecuted = isPreIssueIDTokenActionExecuted;
+    }
+
+    /**
+     * Retrieves the ID token information from the pre issue ID token action.
+     *
+     * @return the {@link IDTokenDTO} instance representing the ID token information from the pre issue ID token action.
+     * If no ID token information is available, it will return {@code null}.
+     */
+    public IDTokenDTO getPreIssueIDTokenActionDTO() {
+
+        return preIssueIDTokenActionDTO;
+    }
+
+    /**
+     * Sets the ID token information from the pre issue ID token action.
+     * This method updates the pre issue ID token action DTO with the provided {@link IDTokenDTO} instance.
+     *
+     * @param preIssueIDTokenActionDTO the {@link IDTokenDTO} instance representing the ID token information from the
+     *                                 pre issue ID token action to set.
+     */
+    public void setPreIssueIDTokenActionDTO(IDTokenDTO preIssueIDTokenActionDTO) {
+
+        this.preIssueIDTokenActionDTO = preIssueIDTokenActionDTO;
     }
 }

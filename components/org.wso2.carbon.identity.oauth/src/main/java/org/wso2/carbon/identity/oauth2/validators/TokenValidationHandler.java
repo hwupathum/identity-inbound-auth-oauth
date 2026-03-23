@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -51,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
@@ -541,11 +543,22 @@ public class TokenValidationHandler {
                         .getVerifiedAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
                 boolean isCrossTenantTokenIntrospectionAllowed
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();
+                boolean allowCrossTenantIntrospectionForSubOrgTokens
+                        = OAuthServerConfiguration.getInstance().allowCrossTenantIntrospectionForSubOrgTokens();
                 if (!isCrossTenantTokenIntrospectionAllowed && accessTokenDO != null &&
                         !tenantDomain.equalsIgnoreCase(accessTokenDO.getAuthzUser().getTenantDomain()) &&
                         StringUtils.isEmpty(accessTokenDO.getAuthzUser().getAccessingOrganization())) {
                     throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+                } else if (!isCrossTenantTokenIntrospectionAllowed && !allowCrossTenantIntrospectionForSubOrgTokens &&
+                        accessTokenDO != null && StringUtils.isNotEmpty(
+                        accessTokenDO.getAuthzUser().getAccessingOrganization())) {
+                    // Previously, cases where accessTokenDO.getAuthzUser().getAccessingOrganization() was not empty
+                    // were not handled correctly. This check ensures that tokens issued for sub-organizations are
+                    // validated properly, while preserving backward compatibility using
+                    // allowCrossTenantIntrospectionForSubOrgTokens.
+                    validateIntrospectionForSubOrgTokens(tenantDomain, accessTokenDO);
                 }
+
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
                 String[] requestedScopes = accessTokenDO.getScope();
                 List<String> scopesToBeValidated = new ArrayList<>();
@@ -568,6 +581,9 @@ public class TokenValidationHandler {
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 return buildIntrospectionErrorResponse(e.getMessage());
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while checking whether the application tenant is an " +
+                        "organization.", e);
             }
 
             if (hasAccessTokenExpired(accessTokenDO)) {
@@ -722,6 +738,22 @@ public class TokenValidationHandler {
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
+    }
+
+    private void validateIntrospectionForSubOrgTokens(String tenantDomain, AccessTokenDO accessTokenDO)
+            throws OrganizationManagementException {
+
+        String accessingOrgID = accessTokenDO.getAuthzUser().getAccessingOrganization();
+        String orgIdOfIntrospectingTenant = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                .resolveOrganizationId(tenantDomain);
+
+        if (!accessingOrgID.equalsIgnoreCase(orgIdOfIntrospectingTenant)) {
+            if (orgIdOfIntrospectingTenant != null && !orgIdOfIntrospectingTenant.equalsIgnoreCase(
+                    OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .getPrimaryOrganizationId(accessingOrgID))) {
+                throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+            }
+        }
     }
 
     private String getAuthzUser(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {

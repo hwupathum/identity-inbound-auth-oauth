@@ -70,6 +70,7 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementConfigUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
@@ -219,6 +220,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         doReturn(MultitenantConstants.SUPER_TENANT_ID).when(tenantManager).getTenantId(Mockito.anyString());
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
         IdentityTenantUtil.setRealmService(realmService);
+        OAuthComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
         when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
         when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
 
@@ -239,7 +241,14 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         tokenBinding.setBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
         accessTokenDO.setTokenBinding(tokenBinding);
 
+        String testUUID = "testUUID";
+        Tenant tenant = new Tenant();
+        tenant.setId(MultitenantConstants.SUPER_TENANT_ID);
+        tenant.setAssociatedOrganizationUUID(testUUID);
+        tenantManager.addTenant(tenant);
+
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(MultitenantConstants.SUPER_TENANT_ID);
         mockStatic(OAuth2ServiceComponentHolder.class);
         OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
                 Mockito.mock(OAuth2ServiceComponentHolder.class);

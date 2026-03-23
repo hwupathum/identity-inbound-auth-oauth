@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -41,6 +40,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -54,17 +54,13 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getAppResidentTenantDomain;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isParsableJWT;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.INVALID_TENANT_ID;
 
@@ -547,25 +543,26 @@ public class TokenValidationHandler {
                 String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                 accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                         .getVerifiedAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
-                /*
-                 Check if the OAuth application is a fragment application. If that is not a fragment application,
-                 then getting the tenant domain from the token.
-                */
-                String appTenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
-                if (OrganizationManagementUtil.isOrganization(appTenantDomain)) {
-                    ServiceProviderProperty[] serviceProviderProperties = OAuth2Util.getServiceProvider(
-                            accessTokenDO.getConsumerKey(), appTenantDomain).getSpProperties();
-                    if (!isFragmentApp(serviceProviderProperties)) {
-                        tenantDomain = appTenantDomain;
-                    }
-                }
+
                 boolean isCrossTenantTokenIntrospectionAllowed
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();
+                boolean allowCrossTenantIntrospectionForSubOrgTokens
+                        = OAuthServerConfiguration.getInstance().allowCrossTenantIntrospectionForSubOrgTokens();
+
                 if (!isCrossTenantTokenIntrospectionAllowed && accessTokenDO != null &&
                         !tenantDomain.equalsIgnoreCase(accessTokenDO.getAuthzUser().getTenantDomain()) &&
                         StringUtils.isEmpty(accessTokenDO.getAuthzUser().getAccessingOrganization())) {
                     throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+                } else if (!isCrossTenantTokenIntrospectionAllowed && !allowCrossTenantIntrospectionForSubOrgTokens &&
+                        accessTokenDO != null && StringUtils.isNotEmpty(
+                        accessTokenDO.getAuthzUser().getAccessingOrganization())) {
+                    // Previously, cases where accessTokenDO.getAuthzUser().getAccessingOrganization() was not empty
+                    // were not handled correctly. This check ensures that tokens issued for sub-organizations are
+                    // validated properly, while preserving backward compatibility using
+                    // allowCrossTenantIntrospectionForSubOrgTokens.
+                    validateIntrospectionForSubOrgTokens(tenantDomain, accessTokenDO);
                 }
+
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
                 String[] requestedScopes = accessTokenDO.getScope();
                 List<String> scopesToBeValidated = new ArrayList<>();
@@ -756,15 +753,20 @@ public class TokenValidationHandler {
         return introResp;
     }
 
-    private boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {
+    private void validateIntrospectionForSubOrgTokens(String tenantDomain, AccessTokenDO accessTokenDO)
+            throws OrganizationManagementException {
 
-        if (serviceProviderProperties == null) {
-            return false;
+        String accessingOrgID = accessTokenDO.getAuthzUser().getAccessingOrganization();
+        String orgIdOfIntrospectingTenant = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                .resolveOrganizationId(tenantDomain);
+
+        if (!accessingOrgID.equalsIgnoreCase(orgIdOfIntrospectingTenant)) {
+            if (orgIdOfIntrospectingTenant != null && !orgIdOfIntrospectingTenant.equalsIgnoreCase(
+                    OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .getPrimaryOrganizationId(accessingOrgID))) {
+                throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+            }
         }
-
-        return Arrays.stream(serviceProviderProperties).
-                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
-                        Boolean.parseBoolean(property.getValue()));
     }
 
     private String getAuthzUser(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {

@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
@@ -147,6 +148,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(CLIENT_ID);
         when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("wso2.com");
         when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("randomPassword");
+        setRequestParameter();
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(serverConfiguration);
@@ -232,6 +234,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(CLIENT_ID);
         when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("carbon.super");
         when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("password");
+        setRequestParameter();
 
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(PRIMARY_DEFAULT_DOMAIN_NAME);
@@ -305,5 +308,15 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
         return new org.powermock.modules.testng.PowerMockObjectFactory();
+    }
+
+    private void setRequestParameter() {
+
+        RequestParameter[] requestParameters = new RequestParameter[3];
+        requestParameters[0] = new RequestParameter("username", "username");
+        requestParameters[1] = new RequestParameter("password", "password");
+        requestParameters[2] = new RequestParameter("grant_type", "password");
+
+        when(oAuth2AccessTokenReqDTO.getRequestParameters()).thenReturn(requestParameters);
     }
 }

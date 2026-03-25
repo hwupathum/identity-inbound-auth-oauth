@@ -5713,7 +5713,20 @@ public class OAuth2Util {
         String[] groups = mappedAttrs.get(GROUPS).toString()
                 .split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator()));
 
-        List<String> groupList = Arrays.stream(groups).map(group -> domainPrefix + group)
+        List<String> groupList = Arrays.stream(groups)
+                .map(String::trim)
+                .map(group -> {
+                    if (group.isEmpty()) {
+                        return group;
+                    }
+                    // If the group already starts with the domain prefix (case-insensitive), keep it as-is.
+                    if (group.length() >= domainPrefix.length()
+                            && group.regionMatches(true, 0, domainPrefix, 0, domainPrefix.length())) {
+                        return group;
+                    }
+                    // Otherwise prepend the domain prefix.
+                    return domainPrefix + group;
+                })
                 .collect(Collectors.toList());
         mappedAttrs.put(GROUPS, String.join(FrameworkUtils.getMultiAttributeSeparator(), groupList));
     }

@@ -205,6 +205,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ADD_USER_STORE_DOMAIN_TO_GROUPS_CLAIM;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
@@ -224,6 +225,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoi
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_USER_INFO_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_WEB_FINGER_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM;
@@ -5684,6 +5686,47 @@ public class OAuth2Util {
     public static boolean shouldDropUnrequestedOIDCScopes() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(DROP_UNREGISTERED_OIDC_SCOPES));
+    }
+
+    /**
+     * Specially handle group claim values.
+     *
+     * @param authenticatedUser Authenticated User.
+     * @param mappedAttrs Mapped claim attributes.
+     */
+    public static void handleGroupClaim(AuthenticatedUser authenticatedUser, Map<String, Object> mappedAttrs) {
+
+        if (!IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled() ||
+                !Boolean.parseBoolean(IdentityUtil.getProperty(ADD_USER_STORE_DOMAIN_TO_GROUPS_CLAIM))) {
+            return;
+        }
+
+        if (!mappedAttrs.containsKey(GROUPS) || authenticatedUser == null) {
+            return;
+        }
+
+        String userStoreDomain = authenticatedUser.getUserStoreDomain();
+        if (resolvePrimaryUserStoreDomainName().equals(userStoreDomain)) {
+            return;
+        }
+        String domainPrefix = userStoreDomain + "/";
+        String[] groups = mappedAttrs.get(GROUPS).toString()
+                .split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator()));
+
+        List<String> groupList = Arrays.stream(groups).map(group -> domainPrefix + group)
+                .collect(Collectors.toList());
+        mappedAttrs.put(GROUPS, String.join(FrameworkUtils.getMultiAttributeSeparator(), groupList));
+    }
+
+    public static String resolvePrimaryUserStoreDomainName() {
+
+        RealmConfiguration realmConfiguration = OAuthComponentServiceHolder.getInstance().getRealmService()
+                .getBootstrapRealmConfiguration();
+        if (realmConfiguration.getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME) != null) {
+            return realmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME).toUpperCase();
+        }
+        return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
     }
 }
 

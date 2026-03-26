@@ -402,7 +402,7 @@ public class OAuth2Util {
             "OAuth.EnableLegacySessionBoundTokenBehaviour";
     private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
             "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
-    private static final String DROP_UNREGISTERED_OIDC_SCOPES = "OAuth.DropUnrequestedOIDCScopes";
+    private static final String DROP_UNREQUESTED_OIDC_SCOPES = "OAuth.DropUnrequestedOIDCScopes";
 
     private OAuth2Util() {
 
@@ -5685,7 +5685,7 @@ public class OAuth2Util {
      */
     public static boolean shouldDropUnrequestedOIDCScopes() {
 
-        return Boolean.parseBoolean(IdentityUtil.getProperty(DROP_UNREGISTERED_OIDC_SCOPES));
+        return Boolean.parseBoolean(IdentityUtil.getProperty(DROP_UNREQUESTED_OIDC_SCOPES));
     }
 
     /**

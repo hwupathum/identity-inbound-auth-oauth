@@ -147,6 +147,8 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
                                                       .getCertificate("wso2carbon"));
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
         when(realmService.getTenantManager()).thenReturn(tenantManager);
+        when(tenantManager.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
         Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
         privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())

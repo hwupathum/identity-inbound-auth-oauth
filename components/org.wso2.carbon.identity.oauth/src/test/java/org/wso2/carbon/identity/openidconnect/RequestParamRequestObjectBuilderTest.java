@@ -27,6 +27,7 @@ import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -36,6 +37,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.TestConstants;
@@ -77,7 +79,7 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestOb
 
 @PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class,
         RequestObjectValidatorImpl.class, LoggerUtils.class, IdentityTenantUtil.class, IdentityEventService.class,
-        CentralLogMgtServiceComponentHolder.class})
+        CentralLogMgtServiceComponentHolder.class, KeyStoreManager.class})
 @PowerMockIgnore({"javax.crypto.*", "sun.security.x509.*", "java.security.cert"})
 public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
 
@@ -263,6 +265,9 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setRequestObjectEncryptionAlgorithm(algName);
         appDO.setRequestObjectEncryptionMethod(EncryptionMethod.A256GCM.getName());
+        JWEAlgorithm alg = new JWEAlgorithm(algName);
+        when((OAuth2Util.getEncryptionPrivateKey(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME, alg)))
+                .thenReturn(rsaPrivateKey);
         when(OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                 .thenReturn(appDO);
         when(OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
@@ -273,6 +278,10 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
 
         RequestObject requestObject;
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
+        PowerMockito.mockStatic(KeyStoreManager.class);
+        KeyStoreManager ksm = Mockito.mock(KeyStoreManager.class);
+        when(ksm.getDefaultPrivateKey()).thenReturn(rsaPrivateKey);
+        Mockito.when(ksm.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
 
         requestObject = requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
 

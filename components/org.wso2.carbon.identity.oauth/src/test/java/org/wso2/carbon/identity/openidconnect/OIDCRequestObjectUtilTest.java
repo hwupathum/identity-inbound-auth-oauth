@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.mockito.Mock;
@@ -66,13 +68,14 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
 @PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class, OAuthAuthzRequest.class,
         RequestObjectValidatorImpl.class, IdentityTenantUtil.class, LoggerUtils.class, IdentityEventService.class,
-        CentralLogMgtServiceComponentHolder.class, RequestObjectValidatorUtil.class})
+        CentralLogMgtServiceComponentHolder.class, RequestObjectValidatorUtil.class, KeyStoreManager.class})
 @PowerMockIgnore({"javax.crypto.*"})
 public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
 
@@ -146,6 +149,13 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setRequestObjectSignatureValidationEnabled(isFAPITest);
+        if (isEncrypted) {
+            JWEObject jweObject = JWEObject.parse(requestObjectString);
+            oAuthAppDO.setRequestObjectEncryptionAlgorithm(jweObject.getHeader().getAlgorithm().getName());
+            oAuthAppDO.setRequestObjectEncryptionMethod(jweObject.getHeader().getEncryptionMethod().getName());
+            JWEAlgorithm alg = new JWEAlgorithm(jweObject.getHeader().getAlgorithm().getName());
+            when((OAuth2Util.getEncryptionPrivateKey(SUPER_TENANT_DOMAIN_NAME, alg))).thenReturn(rsaPrivateKey);
+        }
         when(OAuth2Util.getAppInformationByClientId(TEST_CLIENT_ID_1)).thenReturn(oAuthAppDO);
         when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
 
@@ -162,6 +172,10 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
         requestObjectBuilderMap.put(REQUEST_URI_PARAM_VALUE_BUILDER, null);
         when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
+        PowerMockito.mockStatic(KeyStoreManager.class);
+        KeyStoreManager ksm = Mockito.mock(KeyStoreManager.class);
+        when(ksm.getDefaultPrivateKey()).thenReturn(rsaPrivateKey);
+        Mockito.when(ksm.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
         try {
             OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
         } catch (RequestObjectException e) {

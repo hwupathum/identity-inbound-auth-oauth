@@ -2776,6 +2776,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStoreDomain);
         String userDomain = OAuth2Util.getUserStoreDomain(authzUser);
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authzUser);
+        String authorizedOrganization = authzUser.getAccessingOrganization();
+        if (StringUtils.isBlank(authorizedOrganization)) {
+            authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
+        }
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
@@ -2865,9 +2869,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
 
             prepStmt.setString(7, tokenBindingReference);
+            prepStmt.setString(8, authorizedOrganization);
 
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(8, authenticatedIDP);
+                prepStmt.setString(9, authenticatedIDP);
+                prepStmt.setInt(10, tenantId);
             }
 
             resultSet = prepStmt.executeQuery();

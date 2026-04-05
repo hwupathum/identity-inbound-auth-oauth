@@ -2768,8 +2768,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         if (authzUser == null) {
             throw new IdentityOAuth2Exception("Invalid user information for given consumerKey: " + consumerKey);
         }
-        String tenantDomain = authzUser.getTenantDomain();
+        String tenantDomain = getUserResidentTenantDomain(authzUser);
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
+        int appTenantId = OAuth2Util.getTenantId(authzUser.getTenantDomain());
         boolean isUsernameCaseSensitive =
                 IdentityUtil.isUserStoreCaseSensitive(authzUser.getUserStoreDomain(), tenantId);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
@@ -2855,7 +2856,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            prepStmt.setInt(2, appTenantId);
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {
@@ -2873,7 +2874,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 prepStmt.setString(9, authenticatedIDP);
-                prepStmt.setInt(10, tenantId);
+                // Set tenant ID of the IDP by considering it is same as appTenantId.
+                prepStmt.setInt(10, appTenantId);
             }
 
             resultSet = prepStmt.executeQuery();

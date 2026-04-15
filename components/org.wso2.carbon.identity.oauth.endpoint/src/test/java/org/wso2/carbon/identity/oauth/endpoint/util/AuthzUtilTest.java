@@ -2021,7 +2021,51 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
         when(mockedSSOConsentService
                 .getConsentRequiredClaimsWithoutExistingConsents(any(ServiceProvider.class),
                         any(AuthenticatedUser.class))).thenReturn(new ConsentClaimsData());
+        when(mockedSSOConsentService
+                .getUnconsentedPolicyPurposes(anyString(), anyString())).thenReturn(Collections.emptyList());
 
         when(mockedSSOConsentService.isSSOConsentManagementEnabled(any())).thenReturn(isConsentMgtEnabled);
+    }
+
+    @Test
+    public void testBuildPolicyConsentQueryParam_emptyList_returnsEmpty() throws Exception {
+
+        Method method = AuthzUtil.class.getDeclaredMethod("buildPolicyConsentQueryParam", List.class);
+        method.setAccessible(true);
+        String result = (String) method.invoke(null, Collections.emptyList());
+        assertEquals(result, StringUtils.EMPTY);
+    }
+
+    @Test
+    public void testBuildPolicyConsentQueryParam_withUuids_returnsQueryParam() throws Exception {
+
+        Method method = AuthzUtil.class.getDeclaredMethod("buildPolicyConsentQueryParam", List.class);
+        method.setAccessible(true);
+        List<String> uuids = Arrays.asList("uuid-1", "uuid-2");
+        String result = (String) method.invoke(null, uuids);
+        assertEquals(result, OAuthConstants.POLICY_PURPOSES_PARAM + "=uuid-1,uuid-2");
+    }
+
+    @Test
+    public void testGetUnconsentedPolicies_noProperty_returnsEmptyList() throws Exception {
+
+        OAuthMessage msg = mock(OAuthMessage.class);
+        when(msg.getProperty(OAuthConstants.UNCONSENTED_POLICY_PURPOSES)).thenReturn(null);
+        Method method = AuthzUtil.class.getDeclaredMethod("getUnconsentedPolicies", OAuthMessage.class);
+        method.setAccessible(true);
+        List<?> result = (List<?>) method.invoke(null, msg);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testGetUnconsentedPolicies_withProperty_returnsList() throws Exception {
+
+        OAuthMessage msg = mock(OAuthMessage.class);
+        List<String> uuids = Arrays.asList("uuid-A", "uuid-B");
+        when(msg.getProperty(OAuthConstants.UNCONSENTED_POLICY_PURPOSES)).thenReturn(uuids);
+        Method method = AuthzUtil.class.getDeclaredMethod("getUnconsentedPolicies", OAuthMessage.class);
+        method.setAccessible(true);
+        List<?> result = (List<?>) method.invoke(null, msg);
+        assertEquals(result, uuids);
     }
 }

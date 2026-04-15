@@ -110,6 +110,7 @@ import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.PolicyConsentDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.DeviceServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OpenIDConnectClaimFilterFactory;
@@ -675,6 +676,24 @@ public class AuthzUtil {
                 Get the user consented claims from the consent response and create a consent receipt.
             */
             handlePostConsent(oAuthMessage);
+
+            try {
+                handlePostPolicyConsent(oAuthMessage);
+            } catch (PolicyConsentDeniedException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Policy consent denied by user.", e);
+                }
+                handleDeniedConsent(oAuthMessage, authorizationResponseDTO, responseModeProvider);
+                if (ResponseModeProvider.AuthResponseType.REDIRECTION.equals(
+                        responseModeProvider.getAuthResponseType())) {
+                    return Response.status(authorizationResponseDTO.getResponseCode())
+                            .location(new URI(responseModeProvider.getAuthResponseRedirectUrl(
+                                    authorizationResponseDTO))).build();
+                } else {
+                    return Response.ok(responseModeProvider.getAuthResponseBuilderEntity(
+                            authorizationResponseDTO)).build();
+                }
+            }
 
             OIDCSessionState sessionState = new OIDCSessionState();
 
@@ -3229,6 +3248,8 @@ public class AuthzUtil {
             return handleAuthorizationFailureBeforeConsent(oAuthMessage, oauth2Params, oAuth2AuthorizeRespDTO);
         }
 
+        computeAndStoreUnconsentedPolicies(oAuthMessage, oauth2Params, authenticatedUser);
+
         boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
 
         if (hasPromptContainsConsent(oauth2Params)) {
@@ -3382,6 +3403,8 @@ public class AuthzUtil {
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
         }
+        String policyParam = buildPolicyConsentQueryParam(getUnconsentedPolicies(oAuthMessage));
+        preConsent = buildQueryParamString(preConsent, policyParam);
         return getUserConsentURL(sessionDataKey, oauth2Params, user, preConsent, oAuthMessage);
     }
 
@@ -3762,6 +3785,75 @@ public class AuthzUtil {
         return URLEncoder.encode(joiner.toString(), StandardCharsets.UTF_8.toString());
     }
 
+    private static String buildPolicyConsentQueryParam(List<String> unconsentedPurposeUuids) {
+
+        if (CollectionUtils.isEmpty(unconsentedPurposeUuids)) {
+            return StringUtils.EMPTY;
+        }
+        StringJoiner uuids = new StringJoiner(",");
+        for (String uuid : unconsentedPurposeUuids) {
+            uuids.add(uuid);
+        }
+        return OAuthConstants.POLICY_PURPOSES_PARAM + "=" + uuids;
+    }
+
+    private static void handlePostPolicyConsent(OAuthMessage oAuthMessage)
+            throws ConsentHandlingFailedException, PolicyConsentDeniedException, OAuthSystemException {
+
+        OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
+        if (isConsentHandlingFromFrameworkSkipped(oauth2Params)) {
+            return;
+        }
+        try {
+            AuthenticatedUser loggedInUser = getLoggedInUser(oAuthMessage);
+            String subjectId = loggedInUser.getAuthenticatedSubjectIdentifier();
+            String tenantDomain = oauth2Params.getTenantDomain();
+            List<String> unconsentedUuids = getSSOConsentService()
+                    .getUnconsentedPolicyPurposes(subjectId, tenantDomain);
+            for (String purposeUuid : unconsentedUuids) {
+                String paramValue = oAuthMessage.getRequest().getParameter(
+                        OAuthConstants.POLICY_CONSENT_PARAM_PREFIX + purposeUuid);
+                if (!"true".equalsIgnoreCase(paramValue)) {
+                    throw new PolicyConsentDeniedException("Policy consent denied for purpose: " + purposeUuid);
+                }
+                getSSOConsentService().processPolicyConsent(subjectId, tenantDomain, purposeUuid);
+            }
+        } catch (PolicyConsentDeniedException e) {
+            throw e;
+        } catch (SSOConsentServiceException e) {
+            throw new ConsentHandlingFailedException("Error persisting policy consent", e);
+        }
+    }
+
+    private static void computeAndStoreUnconsentedPolicies(OAuthMessage oAuthMessage,
+                                                           OAuth2Parameters oauth2Params,
+                                                           AuthenticatedUser authenticatedUser)
+            throws ConsentHandlingFailedException, OAuthSystemException {
+
+        if (isConsentSkipped(oauth2Params) || isConsentHandlingFromFrameworkSkipped(oauth2Params)) {
+            return;
+        }
+        try {
+            String subjectId = authenticatedUser.getAuthenticatedSubjectIdentifier();
+            String tenantDomain = oauth2Params.getTenantDomain();
+            List<String> unconsentedUuids = getSSOConsentService()
+                    .getUnconsentedPolicyPurposes(subjectId, tenantDomain);
+            oAuthMessage.setProperty(OAuthConstants.UNCONSENTED_POLICY_PURPOSES, unconsentedUuids);
+        } catch (SSOConsentServiceException e) {
+            throw new ConsentHandlingFailedException("Error fetching unconsented policy purposes", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> getUnconsentedPolicies(OAuthMessage oAuthMessage) {
+
+        Object value = oAuthMessage.getProperty(OAuthConstants.UNCONSENTED_POLICY_PURPOSES);
+        if (value instanceof List) {
+            return (List<String>) value;
+        }
+        return Collections.emptyList();
+    }
+
     private static String handleIdTokenHint(OAuthMessage oAuthMessage,
                                             OIDCSessionState sessionState,
                                             OAuth2Parameters oauth2Params,
@@ -3893,6 +3985,16 @@ public class AuthzUtil {
             throw OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED,
                     "Consent approved always without prompting for new consent");
         } else {
+            if (!CollectionUtils.isEmpty(getUnconsentedPolicies(oAuthMessage))) {
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.configParam("unconsented policies", "true")
+                            .resultMessage("'prompt' is set to none, but required policy consent not found.")
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
+                throw OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED,
+                        "Required policy consent not found");
+            }
             if (diagnosticLogBuilder != null) {
                 // diagnosticLogBuilder will be null only if diagnostic logs are disabled.
                 diagnosticLogBuilder.resultMessage("'prompt' is set to none, and existing user consent found for " +
@@ -3913,9 +4015,11 @@ public class AuthzUtil {
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
         String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser);
 
-        if (isConsentFromUserRequired(preConsent)) {
+        String policyParam = buildPolicyConsentQueryParam(getUnconsentedPolicies(oAuthMessage));
+        if (isConsentFromUserRequired(preConsent) || StringUtils.isNotBlank(policyParam)) {
             String sessionDataKeyFromLogin = getSessionDataKeyFromLogin(oAuthMessage);
             preConsent = buildQueryParamString(preConsent, USER_CLAIMS_CONSENT_ONLY + "=true");
+            preConsent = buildQueryParamString(preConsent, policyParam);
             authorizationResponseDTO.setIsConsentRedirect(true);
             return getUserConsentURL(sessionDataKeyFromLogin, oauth2Params,
                     authenticatedUser, preConsent, oAuthMessage);

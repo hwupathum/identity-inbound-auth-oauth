@@ -300,6 +300,15 @@ public final class OAuthConstants {
 
     public static final String REQUESTED_ACTOR = "requested_actor";
 
+    /** OAuthMessage property key for the list of unconsented Policy-type purpose UUIDs. */
+    public static final String UNCONSENTED_POLICY_PURPOSES = "unconsented_policy_purposes";
+
+    /** Query param sent to consent page: comma-separated policy purpose UUIDs needing consent. */
+    public static final String POLICY_PURPOSES_PARAM = "policy_purposes";
+
+    /** Prefix of request params posted back from consent page per accepted policy purpose. */
+    public static final String POLICY_CONSENT_PARAM_PREFIX = "policy_consent_";
+
     private OAuthConstants() {
 
     }

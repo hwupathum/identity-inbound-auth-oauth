@@ -110,7 +110,6 @@ import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
-import org.wso2.carbon.identity.oauth.endpoint.exception.PolicyConsentDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.DeviceServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OpenIDConnectClaimFilterFactory;
@@ -677,23 +676,7 @@ public class AuthzUtil {
             */
             handlePostConsent(oAuthMessage);
 
-            try {
-                handlePostPolicyConsent(oAuthMessage);
-            } catch (PolicyConsentDeniedException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Policy consent denied by user.", e);
-                }
-                handleDeniedConsent(oAuthMessage, authorizationResponseDTO, responseModeProvider);
-                if (ResponseModeProvider.AuthResponseType.REDIRECTION.equals(
-                        responseModeProvider.getAuthResponseType())) {
-                    return Response.status(authorizationResponseDTO.getResponseCode())
-                            .location(new URI(responseModeProvider.getAuthResponseRedirectUrl(
-                                    authorizationResponseDTO))).build();
-                } else {
-                    return Response.ok(responseModeProvider.getAuthResponseBuilderEntity(
-                            authorizationResponseDTO)).build();
-                }
-            }
+            handlePostPolicyConsent(oAuthMessage);
 
             OIDCSessionState sessionState = new OIDCSessionState();
 
@@ -3798,7 +3781,7 @@ public class AuthzUtil {
     }
 
     private static void handlePostPolicyConsent(OAuthMessage oAuthMessage)
-            throws ConsentHandlingFailedException, PolicyConsentDeniedException, OAuthSystemException {
+            throws ConsentHandlingFailedException, OAuthSystemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         if (isConsentHandlingFromFrameworkSkipped(oauth2Params)) {
@@ -3811,15 +3794,8 @@ public class AuthzUtil {
             List<String> unconsentedUuids = getSSOConsentService()
                     .getUnconsentedPolicyPurposes(subjectId, tenantDomain);
             for (String purposeUuid : unconsentedUuids) {
-                String paramValue = oAuthMessage.getRequest().getParameter(
-                        OAuthConstants.POLICY_CONSENT_PARAM_PREFIX + purposeUuid);
-                if (!"true".equalsIgnoreCase(paramValue)) {
-                    throw new PolicyConsentDeniedException("Policy consent denied for purpose: " + purposeUuid);
-                }
                 getSSOConsentService().processPolicyConsent(subjectId, tenantDomain, purposeUuid);
             }
-        } catch (PolicyConsentDeniedException e) {
-            throw e;
         } catch (SSOConsentServiceException e) {
             throw new ConsentHandlingFailedException("Error persisting policy consent", e);
         }
@@ -3830,7 +3806,7 @@ public class AuthzUtil {
                                                            AuthenticatedUser authenticatedUser)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
-        if (isConsentSkipped(oauth2Params) || isConsentHandlingFromFrameworkSkipped(oauth2Params)) {
+        if (isConsentSkipped(oauth2Params) || isConsentHandlingFromFrameworkSkipped(oauth2Params)) { // oidc only?
             return;
         }
         try {

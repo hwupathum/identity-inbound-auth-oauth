@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
@@ -61,6 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isFragmentApp;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isParsableJWT;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.INVALID_TENANT_ID;
 
@@ -754,7 +756,7 @@ public class TokenValidationHandler {
     }
 
     private void validateIntrospectionForSubOrgTokens(String tenantDomain, AccessTokenDO accessTokenDO)
-            throws OrganizationManagementException {
+            throws OrganizationManagementException, IdentityOAuth2Exception {
 
         String accessingOrgID = accessTokenDO.getAuthzUser().getAccessingOrganization();
         String orgIdOfIntrospectingTenant = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
@@ -764,6 +766,23 @@ public class TokenValidationHandler {
             if (orgIdOfIntrospectingTenant != null && !orgIdOfIntrospectingTenant.equalsIgnoreCase(
                     OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                             .getPrimaryOrganizationId(accessingOrgID))) {
+                throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+            }
+        }
+
+        int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
+        String accessingOrgIdFromPath = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                getApplicationResidentOrganizationId();
+        if (OrganizationManagementUtil.isOrganization(appResidentTenantId)) {
+            if (!isFragmentApp(accessTokenDO.getConsumerKey(),
+                    IdentityTenantUtil.getTenantDomain(appResidentTenantId))) {
+                if (StringUtils.isNotEmpty(accessingOrgIdFromPath) &&
+                        !accessingOrgIdFromPath.equalsIgnoreCase(accessingOrgID)) {
+                    throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+                }
+            }
+        } else {
+            if (StringUtils.isNotEmpty(accessingOrgIdFromPath)) {
                 throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
             }
         }

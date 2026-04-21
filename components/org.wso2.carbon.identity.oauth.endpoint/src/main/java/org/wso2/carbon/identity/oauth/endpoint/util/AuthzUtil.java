@@ -3789,7 +3789,7 @@ public class AuthzUtil {
         }
         try {
             AuthenticatedUser loggedInUser = getLoggedInUser(oAuthMessage);
-            String subjectId = loggedInUser.getAuthenticatedSubjectIdentifier();
+            String subjectId = loggedInUser.getUserName();
             String tenantDomain = oauth2Params.getTenantDomain();
             List<String> unconsentedUuids = getSSOConsentService()
                     .getUnconsentedPolicyPurposes(subjectId, tenantDomain);
@@ -3810,7 +3810,7 @@ public class AuthzUtil {
             return;
         }
         try {
-            String subjectId = authenticatedUser.getAuthenticatedSubjectIdentifier();
+            String subjectId = authenticatedUser.getUserName();
             String tenantDomain = oauth2Params.getTenantDomain();
             List<String> unconsentedUuids = getSSOConsentService()
                     .getUnconsentedPolicyPurposes(subjectId, tenantDomain);

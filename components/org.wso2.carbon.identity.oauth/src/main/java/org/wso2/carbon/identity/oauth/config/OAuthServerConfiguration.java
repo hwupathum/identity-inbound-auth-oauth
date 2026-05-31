@@ -331,6 +331,11 @@ public class OAuthServerConfiguration {
 
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
+
+    // Property to determine whether the SP ID should be returned to the application. Marking it as true to
+    // preserve backward compatibility.
+    private boolean returnSpIdToApplication = true;
+
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
     // Property to define the default requested scopes.
@@ -588,6 +593,9 @@ public class OAuthServerConfiguration {
         // Read config for restricted query parameters in oauth requests
         parseRestrictedQueryParameters(oauthElem);
 
+        // Read config for returning spId to application.
+        parseReturnSpIdToApplicationConfig(oauthElem);
+
         // Read config for removing internal prefix from mapped roles attribute in JWT tokens.
         parseRemoveInternalPrefixFromMappedRolesAttributeInToken(oauthElem);
     }
@@ -674,6 +682,15 @@ public class OAuthServerConfiguration {
         if (showAuthFailureReasonForPasswordGrantElement != null) {
             showAuthFailureReasonForPasswordGrant = Boolean.parseBoolean(
                     showAuthFailureReasonForPasswordGrantElement.getText().trim());
+        }
+    }
+
+    private void parseReturnSpIdToApplicationConfig(OMElement oauthElem) {
+
+        OMElement returnSpIdToApplicationElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RETURN_SP_ID_TO_APPLICATION));
+        if (returnSpIdToApplicationElement != null) {
+            returnSpIdToApplication = Boolean.parseBoolean(returnSpIdToApplicationElement.getText().trim());
         }
     }
 
@@ -946,6 +963,17 @@ public class OAuthServerConfiguration {
     public boolean isSkipOIDCClaimsForClientCredentialGrant() {
 
         return skipOIDCClaimsForClientCredentialGrant;
+    }
+
+    /**
+     * Returns the value of returnSpIdToApplication configuration. By configuring this, apps can receive spId in
+     * the query param.
+     *
+     * @return boolean value of returnSpIdToApplication configuration.
+     */
+    public boolean returnSpIdToApps() {
+
+        return returnSpIdToApplication;
     }
 
     public boolean isShowAuthFailureReasonForPasswordGrant() {
@@ -4567,6 +4595,7 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
+        private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSpIdToApplication";
         private static final String REMOVE_INTERNAL_PREFIX_FROM_MAPPED_ROLES_ATTRIBUTE =
                 "RemoveInternalPrefixFromMappedRolesAttributeInToken";
     }

@@ -924,4 +924,91 @@ public class TokenValidationHandlerTest {
             }
         }
     }
+
+    @Test
+    public void testScopesRestoredAfterIntrospection() throws Exception {
+
+        try (MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+            mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
+
+            oAuthServerConfiguration.when(
+                            () -> OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed())
+                    .thenReturn(true);
+            oAuthServerConfiguration.when(
+                            () -> OAuthServerConfiguration.getInstance().allowCrossTenantIntrospectionForSubOrgTokens())
+                    .thenReturn(true);
+            // Configure allowed scopes — this triggers the scope filtering logic in validateAccessToken.
+            List<String> allowedScopes = new ArrayList<>();
+            allowedScopes.add("openid");
+            oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getAllowedScopes())
+                    .thenReturn(allowedScopes);
+
+            OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                    Mockito.mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolderInstance);
+
+            OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+            IdentityTenantUtil.setRealmService(realmService);
+            lenient().when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
+            identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(MultitenantConstants.SUPER_TENANT_ID);
+
+            OAuth2TokenValidationRequestDTO validationRequest = new OAuth2TokenValidationRequestDTO();
+            OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = validationRequest.new OAuth2AccessToken();
+            accessToken.setIdentifier("test-access-token-scope-restore");
+            accessToken.setTokenType("bearer");
+            validationRequest.setAccessToken(accessToken);
+
+            // Create token with scopes including an allowed scope ("openid") that will be filtered.
+            String[] originalScopes = new String[]{"openid", "scope1", "scope2"};
+            AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, originalScopes, issuedTime,
+                    refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                    authorizationCode);
+            accessTokenDO.setTokenId("test-token-id-scope-restore");
+
+            TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
+            when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
+            when(tokenProvider.getVerifiedAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByAccessTokenDO(any())).thenReturn(new OAuthAppDO());
+
+            ServiceProvider serviceProvider = new ServiceProvider();
+            serviceProvider.setApplicationVersion("v1.0.0");
+            oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), any()))
+                    .thenReturn(serviceProvider);
+            oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), anyBoolean())).thenReturn(1000L);
+            oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt())).thenReturn(StringUtils.EMPTY);
+            oAuth2Util.when(() -> OAuth2Util.buildScopeString(any(String[].class))).thenCallRealMethod();
+            oAuth2Util.when(() -> OAuth2Util.isAllowedScope(any(), anyString())).thenCallRealMethod();
+
+            OAuth2IntrospectionResponseDTO introspectionResponse = tokenValidationHandler
+                    .buildIntrospectionResponse(validationRequest);
+
+            assertNotNull(introspectionResponse, "Introspection response should not be null");
+
+            // Verify that the accessTokenDO's scopes are restored to the original values after introspection.
+            // Before the fix, the scopes would have been mutated to only contain non-allowed scopes (e.g.,
+            // "openid" would be stripped), causing cache key mismatches during subsequent operations like revocation.
+            String[] scopesAfterIntrospection = accessTokenDO.getScope();
+            assertEquals(scopesAfterIntrospection.length, originalScopes.length,
+                    "Scope count should be preserved after introspection");
+            assertEquals(scopesAfterIntrospection, originalScopes,
+                    "Scopes on cached AccessTokenDO should be restored to original values after introspection");
+        }
+    }
 }

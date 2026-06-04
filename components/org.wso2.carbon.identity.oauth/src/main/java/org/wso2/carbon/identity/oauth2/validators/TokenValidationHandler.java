@@ -527,7 +527,6 @@ public class TokenValidationHandler {
 
         OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
         AccessTokenDO accessTokenDO = null;
-        String[] originalScopes = null;
         List<String> requestedAllowedScopes = new ArrayList<>();
 
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
@@ -540,7 +539,6 @@ public class TokenValidationHandler {
         }
         // Set act claim.
         setIntrospectResponseActClaim(messageContext, introResp);
-        try {
         if (messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN) != null
                 && "true".equalsIgnoreCase((String) messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN))) {
             // this can be a self-issued JWT or any access token issued by a trusted OAuth authorization server.
@@ -594,7 +592,6 @@ public class TokenValidationHandler {
 
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
                 String[] requestedScopes = accessTokenDO.getScope();
-                originalScopes = requestedScopes != null ? requestedScopes.clone() : null;
                 List<String> scopesToBeValidated = new ArrayList<>();
                 if (requestedScopes != null) {
                     for (String scope : requestedScopes) {
@@ -604,6 +601,10 @@ public class TokenValidationHandler {
                             scopesToBeValidated.add(scope);
                         }
                     }
+                    // Work on a clone so the shared cached AccessTokenDO is never mutated. OAuthCache returns the
+                    // same instance to all callers (no defensive copy); filtering its scopes in place would corrupt
+                    // the cached entry, breaking subsequent introspections and revocation cache-key matching.
+                    accessTokenDO = AccessTokenDO.clone(accessTokenDO);
                     accessTokenDO.setScope(scopesToBeValidated.toArray(new String[0]));
                 }
             } catch (IllegalArgumentException e) {
@@ -781,15 +782,6 @@ public class TokenValidationHandler {
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
-        } finally {
-            // Restore the original scopes on the cached AccessTokenDO to prevent cache key mismatches.
-            // The scopes were temporarily modified to exclude allowed scopes during validation. If not restored,
-            // subsequent operations (e.g., token revocation) that retrieve this token from cache would see
-            // incomplete scopes, causing them to build incorrect cache keys and fail to clear stale entries.
-            if (accessTokenDO != null && originalScopes != null) {
-                accessTokenDO.setScope(originalScopes);
-            }
-        }
     }
 
     private void setIntrospectResponseActClaim(OAuth2TokenValidationMessageContext messageContext,

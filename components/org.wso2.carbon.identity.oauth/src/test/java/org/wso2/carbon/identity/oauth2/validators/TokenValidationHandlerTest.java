@@ -98,6 +98,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.lenient;
@@ -918,15 +919,21 @@ public class TokenValidationHandlerTest {
 
             if ((!isLegacySessionBoundTokenBehaviourEnabled || !isSessionBoundTokensAllowedAfterSessionExpiry &&
                     isAppLevelTokenRevocationEnabled) && !isSessionActive) {
-                oAuthUtil.verify(() -> OAuthUtil.clearOAuthCache(accessTokenDO));
-                verify(revocationProcessor, times(1)).revokeAccessToken(
-                        any(), eq(accessTokenDO));
+                // Introspection defensively clones the AccessTokenDO before filtering scopes so the shared cached
+                // object is never mutated. The SSO-bound token revocation therefore operates on the clone, which
+                // carries the same token identity. Match on the token id instead of the exact instance.
+                oAuthUtil.verify(() -> OAuthUtil.clearOAuthCache(
+                        argThat((AccessTokenDO tokenDO) -> tokenDO != null
+                                && "sso-session-token-id".equals(tokenDO.getTokenId()))));
+                verify(revocationProcessor, times(1)).revokeAccessToken(any(),
+                        argThat((AccessTokenDO tokenDO) -> tokenDO != null
+                                && "sso-session-token-id".equals(tokenDO.getTokenId())));
             }
         }
     }
 
     @Test
-    public void testScopesRestoredAfterIntrospection() throws Exception {
+    public void testCachedTokenScopesNotMutatedByIntrospection() throws Exception {
 
         try (MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
@@ -980,7 +987,7 @@ public class TokenValidationHandlerTest {
             AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, originalScopes, issuedTime,
                     refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
                     authorizationCode);
-            accessTokenDO.setTokenId("test-token-id-scope-restore");
+            accessTokenDO.setTokenId("test-token-id-scope-not-mutated");
 
             TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
             when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
@@ -1001,14 +1008,15 @@ public class TokenValidationHandlerTest {
 
             assertNotNull(introspectionResponse, "Introspection response should not be null");
 
-            // Verify that the accessTokenDO's scopes are restored to the original values after introspection.
-            // Before the fix, the scopes would have been mutated to only contain non-allowed scopes (e.g.,
-            // "openid" would be stripped), causing cache key mismatches during subsequent operations like revocation.
+            // Verify that the cached AccessTokenDO is never mutated by introspection. The validation logic filters
+            // out allowed scopes on a clone, so the original (cache-referenced) object retains its full scopes.
+            // Before the fix, this object was mutated in place to only contain non-allowed scopes (e.g., "openid"
+            // would be stripped), causing cache key mismatches during subsequent operations like revocation.
             String[] scopesAfterIntrospection = accessTokenDO.getScope();
             assertEquals(scopesAfterIntrospection.length, originalScopes.length,
-                    "Scope count should be preserved after introspection");
+                    "Scope count on the cached AccessTokenDO should be unchanged after introspection");
             assertEquals(scopesAfterIntrospection, originalScopes,
-                    "Scopes on cached AccessTokenDO should be restored to original values after introspection");
+                    "Scopes on the cached AccessTokenDO should not be mutated by introspection");
         }
     }
 }

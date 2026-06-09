@@ -241,7 +241,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             AccessTokenExtendedAttributes accessTokenExtendedAttributes =
                     tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes();
             if (accessTokenExtendedAttributes != null && accessTokenExtendedAttributes.getParameters() != null) {
-                for (Map.Entry<String, String> entry : accessTokenExtendedAttributes.getParameters().entrySet()) {
+                Map<String, String> filteredParams = new HashMap<>(accessTokenExtendedAttributes.getParameters());
+                removeInternalExtendedAttributes(filteredParams);
+                for (Map.Entry<String, String> entry : filteredParams.entrySet()) {
                     jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
                 }
             }
@@ -479,6 +481,18 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private String getSpTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
         return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+    }
+
+    /**
+     * Remove the internal extended attributes which should not be included in the ID token.
+     *
+     * @param params The map of extended attributes to be filtered.
+     */
+    private void removeInternalExtendedAttributes(Map<String, String> params) {
+
+        params.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT);
+        params.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS);
+        params.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID);
     }
 
     private CustomClaimDTO handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx,

@@ -20,6 +20,10 @@ import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
+
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DB2;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.H2;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.INFORMIX;
@@ -101,6 +105,22 @@ public class JdbcUtils {
     }
 
     /**
+     * Check if the DB is H2, using an already open database connection.
+     * <p>
+     * Unlike {@link #isH2DB()}, this overload reuses the supplied connection to read the DB metadata instead of
+     * acquiring a new connection from the pool. This avoids holding two connections concurrently on the same
+     * thread when the caller already has an open connection.
+     *
+     * @param connection an already open database connection.
+     * @return true if H2, false otherwise.
+     * @throws SQLException if error occurred while checking the DB metadata.
+     */
+    public static boolean isH2DB(Connection connection) throws SQLException {
+
+        return isDBTypeOf(H2, connection);
+    }
+
+    /**
      * Check whether the DB type string contains in the driver name or db product name.
      *
      * @param dbType database type string.
@@ -111,5 +131,24 @@ public class JdbcUtils {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         return jdbcTemplate.getDriverName().contains(dbType) || jdbcTemplate.getDatabaseProductName().contains(dbType);
+    }
+
+    /**
+     * Check whether the DB type string is contained in the driver name or db product name, using an already open
+     * database connection.
+     * <p>
+     * This reuses the supplied connection's metadata instead of acquiring a new connection from the pool, so the
+     * calling thread does not hold two connections at once. It preserves the matching semantics of
+     * {@link #isDBTypeOf(String)} (matching on either the driver name or the database product name).
+     *
+     * @param dbType     database type string.
+     * @param connection an already open database connection.
+     * @return true if the database type matches the driver name or product name, false otherwise.
+     * @throws SQLException if error occurred while checking the DB metadata.
+     */
+    public static boolean isDBTypeOf(String dbType, Connection connection) throws SQLException {
+
+        DatabaseMetaData metadata = connection.getMetaData();
+        return metadata.getDriverName().contains(dbType) || metadata.getDatabaseProductName().contains(dbType);
     }
 }

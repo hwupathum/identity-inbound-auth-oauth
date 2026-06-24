@@ -2971,14 +2971,19 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         if (authzUser == null) {
             throw new IdentityOAuth2Exception("Invalid user information for given consumerKey: " + consumerKey);
         }
-        String tenantDomain = authzUser.getTenantDomain();
+        String tenantDomain = getUserResidentTenantDomain(authzUser);
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
+        int appTenantId = OAuth2Util.getTenantId(getAppTenantDomain(consumerKey));
         boolean isUsernameCaseSensitive =
                 IdentityUtil.isUserStoreCaseSensitive(authzUser.getUserStoreDomain(), tenantId);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
         userStoreDomain = OAuth2Util.getSanitizedUserStoreDomain(userStoreDomain);
         String userDomain = OAuth2Util.getUserStoreDomain(authzUser);
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authzUser);
+        String authorizedOrganization = authzUser.getAccessingOrganization();
+        if (StringUtils.isBlank(authorizedOrganization)) {
+            authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
+        }
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
@@ -3032,7 +3037,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            prepStmt.setInt(2, appTenantId);
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {
@@ -3046,7 +3051,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
 
             prepStmt.setString(7, tokenBindingReference);
-            prepStmt.setString(8, authenticatedIDP);
+            prepStmt.setString(8, authorizedOrganization);
+            prepStmt.setString(9, authenticatedIDP);
+            int idpTenantId = OAuth2Util.getIdpTenantId(authenticatedIDP, appTenantId, authzUser);
+            prepStmt.setInt(10, idpTenantId);
 
 
             resultSet = prepStmt.executeQuery();

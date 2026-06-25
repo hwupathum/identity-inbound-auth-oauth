@@ -59,6 +59,10 @@ public class CibaConstants {
     public static final String STATUS_PARAM = "status";
     public static final String STATUS_MSG_PARAM = "statusMsg";
 
+    // Config property name for resolving the subject identifier of federated CIBA OBO users from the IdP.
+    public static final String RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP =
+            "OAuth.CIBA.ResolveFederatedUserSubjectFromIdP";
+
     private CibaConstants() {
 
     }

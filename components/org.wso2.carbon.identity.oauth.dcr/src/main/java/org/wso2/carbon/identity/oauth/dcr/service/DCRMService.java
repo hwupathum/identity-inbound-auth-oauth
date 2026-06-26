@@ -93,6 +93,8 @@ public class DCRMService {
     private static final String APP_DISPLAY_NAME = "DisplayName";
     private static Pattern clientIdRegexPattern = null;
     private static final String SSA_VALIDATION_JWKS = "OAuth.DCRM.SoftwareStatementJWKS";
+    private static final String CALLBACK_PREFIX = OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(";
+    private static final int CALLBACK_PREFIX_LEN = CALLBACK_PREFIX.length();
 
 
     /**
@@ -660,9 +662,7 @@ public class DCRMService {
         application.setClientId(createdApp.getOauthConsumerKey());
         application.setClientSecret(createdApp.getOauthConsumerSecret());
 
-        List<String> redirectUrisList = new ArrayList<>();
-        redirectUrisList.add(createdApp.getCallbackUrl());
-        application.setRedirectUris(redirectUrisList);
+        application.setRedirectUris(buildRedirectUrisResponse(createdApp.getCallbackUrl()));
 
         List<String> grantTypesList = new ArrayList<>();
         if (StringUtils.isNotEmpty(createdApp.getGrantTypes())) {
@@ -1291,5 +1291,83 @@ public class DCRMService {
             }
         }
         return tenantDomain;
+    }
+
+    /**
+     * Build the {@code redirect_uris} value for the DCR response from the stored OAuth app callback URL.
+     * <p>
+     * For a single registered URI (and empty/zero-URI apps) the callback URL is stored verbatim, so it is returned as
+     * a single-element list - identical to the legacy behavior.
+     * <p>
+     * For multiple registered URIs the callback URL is stored internally as the collapsed regexp form
+     * {@code regexp=(url1|url2|...)} (see {@link #validateAndSetCallbackURIs} / {@link #createRegexPattern}). The
+     * legacy behavior echoed that raw string back in the response, which violates the public contract
+     * ({@code redirect_uris} is an array of URIs) and breaks the APIM key-manager GET/PUT round-trip. When the config
+     * property {@link DCRMConstants#DECODE_DCR_REDIRECT_URIS_IN_RESPONSE} is enabled this method decodes the regexp
+     * form back into the original array.
+     * <p>
+     * The decode is gated default-off (support-patch policy): when the property is absent or false the legacy
+     * single-element behavior is preserved byte-for-byte, so the U2 rollout changes nothing unless the customer
+     * opts in.
+     *
+     * @param callbackUrl the stored OAuth consumer app callback URL (may be null, plain URI or {@code regexp=(...)}).
+     * @return the {@code redirect_uris} list for the response.
+     */
+    private List<String> buildRedirectUrisResponse(String callbackUrl) {
+
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                && isEncodedMultiUriCallback(callbackUrl)) {
+            return decodeRedirectUris(callbackUrl);
+        }
+        List<String> redirectUrisList = new ArrayList<>();
+        redirectUrisList.add(callbackUrl);
+        return redirectUrisList;
+    }
+
+    /**
+     * Whether the stored callback URL is the collapsed multi-URI regexp form {@code regexp=(...)}. Only a value that
+     * has both the exact {@code regexp=(} prefix and a closing {@code )} is treated as encoded; anything else (a plain
+     * single URI, an empty value, or a hand-tampered/non-conforming string) is left untouched so decoding never
+     * throws and never corrupts a legitimate URI.
+     *
+     * @param callbackUrl the stored callback URL.
+     * @return true if the value is the encoded multi-URI regexp form.
+     */
+    private boolean isEncodedMultiUriCallback(String callbackUrl) {
+
+        if (StringUtils.isBlank(callbackUrl)) {
+            return false;
+        }
+        String prefix = OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(";
+        return callbackUrl.startsWith(prefix) && callbackUrl.endsWith(")");
+    }
+
+    /**
+     * Decode the collapsed multi-URI regexp callback {@code regexp=(url1|url2|...)} back into the original list of
+     * redirect URIs. This is the exact inverse of the encoding done by {@link #createRegexPattern} /
+     * {@link #escapeQueryParamsIfPresent}:
+     * <ul>
+     *   <li>strip the {@code regexp=} prefix and the wrapping parentheses;</li>
+     *   <li>split on unescaped {@code |} - safe because {@code |} is never part of a registered URI: every URI is
+     *       validated by {@code DCRMUtils.isRedirectionUriValid} before being joined, and the only per-URI escaping
+     *       applied during encoding is {@code ?} -> {@code \?};</li>
+     *   <li>reverse that escaping ({@code \?} -> {@code ?}) on each element so the result is byte-identical to
+     *       the originally registered URI.</li>
+     * </ul>
+     * If {@code createRegexPattern}/{@code escapeQueryParamsIfPresent} ever apply additional escaping, this decoder
+     * must be updated in lockstep.
+     *
+     * @param callbackUrl the encoded callback URL (already confirmed by {@link #isEncodedMultiUriCallback}).
+     * @return the decoded list of redirect URIs in registration order.
+     */
+    private List<String> decodeRedirectUris(String callbackUrl) {
+
+        String inner = callbackUrl.substring(CALLBACK_PREFIX_LEN, callbackUrl.length() - 1);
+        String[] parts = inner.split("\\|");
+        List<String> uris = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            uris.add(part.replace("\\?", "?"));
+        }
+        return uris;
     }
 }

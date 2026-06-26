@@ -355,21 +355,22 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 boolean resolveFederatedUserSubjectFromIdP = Boolean.parseBoolean(IdentityUtil.getProperty(
                         CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP));
 
+                ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                        .getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
+
                 if (resolveFederatedUserSubjectFromIdP && authenticatedUser.isFederatedUser()) {
-                    // For federated users, the IDN_AUTH_USER row holds a transient session-tracking UUID, not a
-                    // meaningful subject. Leaving the authenticated subject identifier unset lets the
-                    // AccessTokenIssuer fallback (getSubjectClaim()) resolve the correct federated subject.
+                    // For federated users, the IDN_AUTH_USER row holds a transient session-tracking UUID as the
+                    // stored userId, not the meaningful subject identifier from the federated IdP. Use the
+                    // userName field instead, which carries the federated subject (or its claim-mapped equivalent)
+                    // as persisted by CibaMgtDAOImpl.persistAuthenticationSuccess().
                     if (log.isDebugEnabled()) {
-                        log.debug("Skipping UserSessionStore-based subject identifier resolution for federated " +
-                                "user in CIBA flow. The subject identifier will be resolved via the " +
-                                "AccessTokenIssuer fallback.");
+                        log.debug("Resolving subject identifier for federated user in CIBA flow from the " +
+                                "federated subject stored at authentication time (userName field).");
                     }
+                    authenticatedUser.setAuthenticatedSubjectIdentifier(userName, serviceProvider);
                 } else {
                     String subjectIdentifier = UserSessionStore.getInstance()
                             .getUserId(userName, tenantId, userDomain, idpId);
-
-                    ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
-                            .getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
                     authenticatedUser.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
                 }
                 cibaAuthCodeDO.setAuthenticatedUser(authenticatedUser);

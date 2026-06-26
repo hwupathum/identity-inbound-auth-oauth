@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
+import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
@@ -302,6 +303,133 @@ public class CibaGrantHandlerTest {
                 .thenReturn(serviceProvider);
 
         Assert.assertTrue(handler.validateGrant(tokReqMsgCtx));
+    }
+
+    @Test
+    public void testValidateGrantFederatedUserKnobOnResolvesSubjectFromUserName() throws Exception {
+
+        AuthenticatedUser user = buildAuthenticatedUser(true);
+        UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
+
+        identityUtil.when(() -> IdentityUtil.getProperty(
+                CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP)).thenReturn("true");
+
+        Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
+
+        // Knob on + federated user: subject identifier comes from the persisted federated subject
+        // (userName), NOT the transient UUID from UserSessionStore, which must not be queried.
+        Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "testUser");
+        verify(mockUserSessionStore, never()).getUserId(any(), Mockito.anyInt(), any(), Mockito.anyInt());
+    }
+
+    @Test
+    public void testValidateGrantFederatedUserKnobOffUsesUserSessionStore() throws Exception {
+
+        AuthenticatedUser user = buildAuthenticatedUser(true);
+        UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
+
+        identityUtil.when(() -> IdentityUtil.getProperty(
+                CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP)).thenReturn("false");
+
+        Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
+
+        // Knob off: old behavior preserved — subject identifier is the UUID from UserSessionStore.
+        verify(mockUserSessionStore).getUserId("testUser", -1234, "PRIMARY", 1);
+        Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "test-subject-id");
+    }
+
+    @Test
+    public void testValidateGrantLocalUserKnobOnUsesUserSessionStore() throws Exception {
+
+        AuthenticatedUser user = buildAuthenticatedUser(false);
+        UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
+
+        identityUtil.when(() -> IdentityUtil.getProperty(
+                CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP)).thenReturn("true");
+
+        Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
+
+        // Local user: gate does not apply even when the knob is on.
+        verify(mockUserSessionStore).getUserId("testUser", -1234, "PRIMARY", 1);
+        Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "test-subject-id");
+    }
+
+    @Test
+    public void testValidateGrantLocalUserKnobOffUsesUserSessionStore() throws Exception {
+
+        AuthenticatedUser user = buildAuthenticatedUser(false);
+        UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
+
+        identityUtil.when(() -> IdentityUtil.getProperty(
+                CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP)).thenReturn("false");
+
+        Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
+
+        verify(mockUserSessionStore).getUserId("testUser", -1234, "PRIMARY", 1);
+        Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "test-subject-id");
+    }
+
+    private AuthenticatedUser buildAuthenticatedUser(boolean federated) {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName("testUser");
+        user.setTenantDomain("carbon.super");
+        user.setUserStoreDomain("PRIMARY");
+        user.setFederatedUser(federated);
+        return user;
+    }
+
+    private OAuthTokenReqMessageContext buildTokenReqMsgCtx() {
+
+        OAuthTokenReqMessageContext tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        OAuth2AccessTokenReqDTO reqDTO = mock(OAuth2AccessTokenReqDTO.class);
+        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(reqDTO);
+
+        RequestParameter[] parameters = new RequestParameter[1];
+        parameters[0] = new RequestParameter(AUTH_REQ_ID, new String[]{"auth-req-id"});
+        when(reqDTO.getRequestParameters()).thenReturn(parameters);
+        when(reqDTO.getClientId()).thenReturn("client-id");
+        return tokReqMsgCtx;
+    }
+
+    private UserSessionStore setUpGrantFlow(AuthenticatedUser user) throws Exception {
+
+        when(cibaMgtDAO.getCibaAuthCodeKey("auth-req-id")).thenReturn("auth-code-key");
+
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        cibaAuthCodeDO.setCibaAuthCodeKey("auth-code-key");
+        cibaAuthCodeDO.setConsumerKey("client-id");
+        cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.AUTHENTICATED);
+        cibaAuthCodeDO.setExpiresIn(3600);
+        cibaAuthCodeDO.setIssuedTime(new Timestamp(System.currentTimeMillis()));
+        cibaAuthCodeDO.setLastPolledTime(new Timestamp(System.currentTimeMillis() - 10000));
+        cibaAuthCodeDO.setInterval(2);
+        cibaAuthCodeDO.setIdpId(1);
+        cibaAuthCodeDO.setAuthenticatedUser(user);
+
+        List<String> scopes = new ArrayList<>();
+        scopes.add("openid");
+        when(cibaMgtDAO.getScopes("auth-code-key")).thenReturn(scopes);
+        when(cibaMgtDAO.getAuthenticatedUser("auth-code-key")).thenReturn(user);
+        when(cibaMgtDAO.getCibaAuthCode("auth-code-key")).thenReturn(cibaAuthCodeDO);
+
+        oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
+        oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(user)).thenReturn("PRIMARY");
+
+        UserSessionStore mockUserSessionStore = mock(UserSessionStore.class);
+        userSessionStore.when(UserSessionStore::getInstance).thenReturn(mockUserSessionStore);
+        Mockito.lenient().when(mockUserSessionStore.getUserId("testUser", -1234, "PRIMARY", 1))
+                .thenReturn("test-subject-id");
+
+        ApplicationManagementService mockAppMgtService = mock(ApplicationManagementService.class);
+        oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getApplicationMgtService)
+                .thenReturn(mockAppMgtService);
+        ServiceProvider serviceProvider = new ServiceProvider();
+        when(mockAppMgtService.getServiceProviderByClientId(
+                "client-id", OAuthConstants.Scope.OAUTH2, "carbon.super"))
+                .thenReturn(serviceProvider);
+
+        return mockUserSessionStore;
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class,

@@ -472,6 +472,14 @@ public class CibaGrantHandlerTest {
         oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(user)).thenReturn("PRIMARY");
 
+        // ServiceProvider is resolved before the subject-resolution branch.
+        ApplicationManagementService mockAppMgtService = mock(ApplicationManagementService.class);
+        oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getApplicationMgtService)
+                .thenReturn(mockAppMgtService);
+        when(mockAppMgtService.getServiceProviderByClientId(
+                "client-id", OAuthConstants.Scope.OAUTH2, "carbon.super"))
+                .thenReturn(new ServiceProvider());
+
         // Mock UserSessionStore to throw UserSessionException.
         UserSessionStore mockUserSessionStore = mock(UserSessionStore.class);
         userSessionStore.when(UserSessionStore::getInstance).thenReturn(mockUserSessionStore);

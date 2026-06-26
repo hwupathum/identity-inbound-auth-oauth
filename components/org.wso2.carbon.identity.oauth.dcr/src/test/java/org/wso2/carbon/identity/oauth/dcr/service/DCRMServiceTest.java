@@ -1291,6 +1291,24 @@ public class DCRMServiceTest {
         }
     }
 
+    // -------------------------------------------------------------------------------------------------------------
+    // Tests for issue #7314 — DCR response redirect_uris decode (buildRedirectUrisResponse / decode helpers).
+    //
+    // Bug: when an app is registered with multiple redirect URIs, they are collapsed internally into a single
+    // "regexp=(url1|url2|...)" callback string, and the DCR response echoed that raw regexp string in
+    // "redirect_uris" instead of the original array — breaking the public contract and APIM's GET/PUT round-trip.
+    //
+    // Fix (gated, default-off support patch): buildResponse now funnels the callback through
+    // buildRedirectUrisResponse, which decodes the regexp form back into the original array ONLY when the config
+    // property OAuth.DCRM.DecodeRedirectUrisInResponse is true; otherwise the legacy behavior is preserved
+    // byte-for-byte. The tests below lock in both gate states and the decode edge cases.
+    // -------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Builds the internal "regexp=(...)" callback the same way validateAndSetCallbackURIs does, by reusing the
+     * production createRegexPattern, so the decode tests assert against a genuinely encoded value rather than a
+     * hand-crafted string.
+     */
     private String encodeCallback(List<String> redirectUris) throws Exception {
 
         return OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + dcrmService.createRegexPattern(redirectUris);
@@ -1299,6 +1317,9 @@ public class DCRMServiceTest {
     @SuppressWarnings("unchecked")
     private List<String> invokeBuildRedirectUrisResponse(String callbackUrl) throws Exception {
 
+        // Resolve the method with a fixed String parameter type so a null callback (a valid input the production
+        // code is null-safe against) can be passed — invokePrivateMethod infers types from the args and so cannot
+        // handle null.
         Method method = DCRMService.class.getDeclaredMethod("buildRedirectUrisResponse", String.class);
         method.setAccessible(true);
         try {
@@ -1314,6 +1335,7 @@ public class DCRMServiceTest {
         List<String> redirectUris = Arrays.asList(
                 "https://localhost:9443/devportal/", "https://test.com:9443/devportal/");
         String callbackUrl = encodeCallback(redirectUris);
+        // Sanity: the encoded form really is the buggy single regexp string.
         assertTrue(callbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "("));
 
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
@@ -1384,6 +1406,7 @@ public class DCRMServiceTest {
     @Test(description = "#7314: knob ON — query-param URI round-trips byte-exact (escapeQueryParamsIfPresent reversed)")
     public void buildRedirectUrisResponseRestoresQueryParamUriExactly() throws Exception {
 
+        // The first '?' is escaped to '\?' during encoding; the decoder must reverse exactly that and nothing else.
         List<String> redirectUris = Arrays.asList(
                 "https://wso2.com?dummy1=1&dummy=2", "https://test.com/cb");
         String callbackUrl = encodeCallback(redirectUris);
@@ -1405,12 +1428,14 @@ public class DCRMServiceTest {
         String singleUri = "https://single.example.com/cb";
 
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            // Knob on: single URI is stored verbatim (no regexp shape), so it must pass through untouched.
             identityUtil.when(() -> IdentityUtil.getProperty(
                     DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn("true");
             List<String> onResult = invokeBuildRedirectUrisResponse(singleUri);
             assertEquals(onResult.size(), 1);
             assertEquals(onResult.get(0), singleUri);
 
+            // Knob off: identical result.
             identityUtil.when(() -> IdentityUtil.getProperty(
                     DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn("false");
             List<String> offResult = invokeBuildRedirectUrisResponse(singleUri);
@@ -1422,12 +1447,12 @@ public class DCRMServiceTest {
     public Object[][] getNonEncodedCallbacks() {
 
         return new Object[][]{
-                {null},
-                {""},
-                {"https://plain.example.com/cb"},
-                {"regexp=https://no-parens.com"},
-                {"regexp=(https://no-close.com"},
-                {"(https://a.com|https://b.com)"}
+                {null},                                    // null callback
+                {""},                                      // empty callback
+                {"https://plain.example.com/cb"},          // plain single URI
+                {"regexp=https://no-parens.com"},          // regexp prefix but no wrapping parens
+                {"regexp=(https://no-close.com"},          // open paren but no closing paren
+                {"(https://a.com|https://b.com)"}          // parens but missing the regexp= prefix
         };
     }
 

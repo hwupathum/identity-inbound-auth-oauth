@@ -352,13 +352,10 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 String userName = authenticatedUser.getUserName();
                 String userDomain = OAuth2Util.getUserStoreDomain(authenticatedUser);
 
-                boolean resolveFederatedUserSubjectFromIdP = Boolean.parseBoolean(IdentityUtil.getProperty(
-                        CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP));
-
                 ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
                         .getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
 
-                if (resolveFederatedUserSubjectFromIdP && authenticatedUser.isFederatedUser()) {
+                if (authenticatedUser.isFederatedUser()) {
                     // For federated users, the IDN_AUTH_USER row holds a transient session-tracking UUID as the
                     // stored userId, not the meaningful subject identifier from the federated IdP. Use the
                     // userName field instead, which carries the federated subject (or its claim-mapped equivalent)

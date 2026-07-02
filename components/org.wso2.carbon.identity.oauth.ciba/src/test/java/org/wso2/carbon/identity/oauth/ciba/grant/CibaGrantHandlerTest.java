@@ -35,7 +35,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
-import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
@@ -306,65 +305,28 @@ public class CibaGrantHandlerTest {
     }
 
     @Test
-    public void testValidateGrantFederatedUserKnobOnResolvesSubjectFromUserName() throws Exception {
+    public void testValidateGrantFederatedUserResolvesSubjectFromUserName() throws Exception {
 
         AuthenticatedUser user = buildAuthenticatedUser(true);
         UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
 
-        identityUtil.when(() -> IdentityUtil.getProperty(
-                CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP)).thenReturn("true");
-
         Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
 
-        // Knob on + federated user: subject identifier comes from the persisted federated subject
-        // (userName), NOT the transient UUID from UserSessionStore, which must not be queried.
+        // Federated user: subject identifier comes from the persisted federated subject (userName),
+        // NOT the transient UUID from UserSessionStore, which must not be queried.
         Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "testUser");
         verify(mockUserSessionStore, never()).getUserId(any(), Mockito.anyInt(), any(), Mockito.anyInt());
     }
 
     @Test
-    public void testValidateGrantFederatedUserKnobOffUsesUserSessionStore() throws Exception {
-
-        AuthenticatedUser user = buildAuthenticatedUser(true);
-        UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
-
-        identityUtil.when(() -> IdentityUtil.getProperty(
-                CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP)).thenReturn("false");
-
-        Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
-
-        // Knob off: old behavior preserved — subject identifier is the UUID from UserSessionStore.
-        verify(mockUserSessionStore).getUserId("testUser", -1234, "PRIMARY", 1);
-        Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "test-subject-id");
-    }
-
-    @Test
-    public void testValidateGrantLocalUserKnobOnUsesUserSessionStore() throws Exception {
+    public void testValidateGrantLocalUserUsesUserSessionStore() throws Exception {
 
         AuthenticatedUser user = buildAuthenticatedUser(false);
         UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
 
-        identityUtil.when(() -> IdentityUtil.getProperty(
-                CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP)).thenReturn("true");
-
         Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
 
-        // Local user: gate does not apply even when the knob is on.
-        verify(mockUserSessionStore).getUserId("testUser", -1234, "PRIMARY", 1);
-        Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "test-subject-id");
-    }
-
-    @Test
-    public void testValidateGrantLocalUserKnobOffUsesUserSessionStore() throws Exception {
-
-        AuthenticatedUser user = buildAuthenticatedUser(false);
-        UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
-
-        identityUtil.when(() -> IdentityUtil.getProperty(
-                CibaConstants.RESOLVE_FEDERATED_USER_SUBJECT_FROM_IDP)).thenReturn("false");
-
-        Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
-
+        // Local user: subject identifier is resolved via UserSessionStore as before.
         verify(mockUserSessionStore).getUserId("testUser", -1234, "PRIMARY", 1);
         Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "test-subject-id");
     }

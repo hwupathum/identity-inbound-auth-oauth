@@ -27,6 +27,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
@@ -45,6 +46,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.List;
 import java.util.TimeZone;
 
 import javax.servlet.http.HttpServletRequest;
@@ -121,6 +123,10 @@ public class CibaUserAuthenticationEndpoint {
                 return buildErrorResponse(INVALID_AUTH_CODE_KEY);
             }
             
+            // Load scopes from database
+            List<String> scopeList = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getScopes(authCodeKey);
+            cibaAuthCodeDO.setScopes(scopeList.toArray(new String[0]));
+
             // Build the authentication request wrapper with CIBA session details
             // Override content type and method since CarbonOAuthAuthzRequest expects POST with form-urlencoded
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request) {
@@ -163,7 +169,14 @@ public class CibaUserAuthenticationEndpoint {
             commonAuthRequestWrapper.setParameter(
                     org.wso2.carbon.identity.openidconnect.model.Constants.NONCE,
                     cibaAuthCodeDO.getAuthReqId());
-            
+
+            // Set the requested_actor so it is validated and surfaced on the consent screen.
+            if (IdentityUtil.isAgentIdentityEnabled()
+                    && StringUtils.isNotBlank(cibaAuthCodeDO.getRequestedActor())) {
+                commonAuthRequestWrapper.setParameter(
+                        OAuthConstants.REQUESTED_ACTOR, cibaAuthCodeDO.getRequestedActor());
+            }
+
             // Mark PKCE as unsupported for CIBA flow
             commonAuthRequestWrapper.setAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW, true);
             

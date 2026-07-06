@@ -69,6 +69,8 @@ import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
+import org.wso2.carbon.identity.oauth2.agent.services.AgentConfigMgtService;
+import org.wso2.carbon.identity.oauth2.agent.services.AgentConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
@@ -436,6 +438,9 @@ public class OAuth2ServiceComponent {
                     null);
             bundleContext.registerService(ImpersonationNotificationMgtService.class,
                     new ImpersonationNotificationMgtServiceImpl(), null);
+            final AgentConfigMgtService agentConfigMgtService = new AgentConfigMgtServiceImpl();
+            OAuth2ServiceComponentHolder.getInstance().setAgentConfigMgtService(agentConfigMgtService);
+            bundleContext.registerService(AgentConfigMgtService.class, agentConfigMgtService, null);
 
             bundleContext.registerService(AccessTokenResponseHandler.class, new AccessTokenResponseRARHandler(), null);
             bundleContext.registerService(JWTAccessTokenClaimProvider.class,

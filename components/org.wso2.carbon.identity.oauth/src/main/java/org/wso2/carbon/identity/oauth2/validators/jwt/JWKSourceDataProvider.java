@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,6 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.OutboundRequestFilter;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.cache.JWKSCache;
 import org.wso2.carbon.identity.oauth2.cache.JWKSCacheEntry;
@@ -47,6 +48,8 @@ public class JWKSourceDataProvider {
             ".HTTPReadTimeout";
     private static final String HTTP_SIZE_LIMIT_XPATH = "JWTValidatorConfigs.JWKSEndpoint" +
             ".HTTPSizeLimit";
+    private static final String ENFORCE_OUTBOUND_REQUEST_FILTER_XPATH = "JWTValidatorConfigs.JWKSEndpoint" +
+            ".EnforceOutboundRequestFilter";
     private static final Log log = LogFactory.getLog(JWKSourceDataProvider.class);
 
     private static JWKSourceDataProvider jwkSourceDataProvider = new JWKSourceDataProvider();
@@ -70,7 +73,7 @@ public class JWKSourceDataProvider {
      *
      * @param jwksUri Identity provider's JWKS endpoint.
      * @return RemoteJWKSet.
-     * @throws MalformedURLException for invalid URL.
+     * @throws MalformedURLException for invalid URL, or if the jwks_uri is not permitted by policy.
      */
     public RemoteJWKSet<SecurityContext> getJWKSource(String jwksUri) throws MalformedURLException {
 
@@ -116,9 +119,15 @@ public class JWKSourceDataProvider {
      *
      * @param jwksUri Identity provider's jwks_uri.
      * @return RemoteJWKSet
-     * @throws MalformedURLException for invalid URL.
+     * @throws MalformedURLException for invalid URL, or if the jwks_uri is not permitted by policy.
      */
     private RemoteJWKSet<SecurityContext> retrieveJWKSFromJWKSEndpoint(String jwksUri) throws MalformedURLException {
+
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(ENFORCE_OUTBOUND_REQUEST_FILTER_XPATH))
+                && !OutboundRequestFilter.isAllowed(jwksUri)) {
+            throw new MalformedURLException("Outbound request to the configured jwks_uri is not permitted by the " +
+                    "server outbound request filter policy. jwks_uri: " + jwksUri);
+        }
 
         // Retrieve HTTP endpoint configurations.
         int connectionTimeout = readHTTPConnectionConfigValue(HTTP_CONNECTION_TIMEOUT_XPATH);

@@ -2688,4 +2688,69 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 .contains(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
         Assert.assertEquals(supportedTokenBindingTypes.size(), 3);
     }
+
+    @DataProvider(name = "literalCharacterEscaping")
+    public Object[][] literalCharacterEscaping() {
+
+        return new Object[][]{
+                // input regex, expected escaped regex
+                {null, null},
+                // Dots followed by a letter/digit are escaped so they match literally.
+                {"https://good.example.com/cb", "https://good\\.example\\.com/cb"},
+                {"(https://good.example.com/cb1|https://good.example.com/cb2)",
+                        "(https://good\\.example\\.com/cb1|https://good\\.example\\.com/cb2)"},
+                // Wildcards / quantifiers must be preserved (dot not followed by a letter/digit).
+                {"https://good.example.com/.*", "https://good\\.example\\.com/.*"},
+                {"https://good.example.com/cb.+", "https://good\\.example\\.com/cb.+"},
+                {"https://good.example.com/cb.{2}", "https://good\\.example\\.com/cb.{2}"},
+                // Already-escaped characters are not escaped again.
+                {"https://good\\.example\\.com/cb", "https://good\\.example\\.com/cb"},
+                // '+' and '?' before an alphanumeric are escaped as literals.
+                {"https://example.com/cb?a=b", "https://example\\.com/cb\\?a=b"},
+                {"https://example.com/cb+v1", "https://example\\.com/cb\\+v1"},
+        };
+    }
+
+    @Test(dataProvider = "literalCharacterEscaping")
+    public void testGetRegexWithEnforcedLiteralCharacters(String input, String expected) {
+
+        assertEquals(OAuth2Util.getRegexWithEnforcedLiteralCharacters(input), expected);
+    }
+
+    @Test
+    public void testEscapedRegexRejectsLookAlikeHost() {
+
+        // Core of the fix: a stored callback for good.example.com must NOT match a look-alike host.
+        String storedRegex = "(https://good.example.com/cb1|https://good.example.com/cb2)";
+        String escaped = OAuth2Util.getRegexWithEnforcedLiteralCharacters(storedRegex);
+
+        assertTrue("https://good.example.com/cb1".matches(escaped),
+                "Legitimate registered host should still match.");
+        assertTrue("https://good.example.com/cb2".matches(escaped),
+                "Second legitimate registered host should still match.");
+        assertFalse("https://good-example.com/cb1".matches(escaped),
+                "Look-alike host must not match after literal-character escaping.");
+        assertFalse("https://goodXexample.com/cb1".matches(escaped),
+                "Any single-character substitution of the dot must not match.");
+    }
+
+    @DataProvider(name = "enforceLiteralCharactersConfig")
+    public Object[][] enforceLiteralCharactersConfig() {
+
+        return new Object[][]{
+                {null, true},   // Unset -> enabled by default.
+                {"", true},     // Blank -> enabled by default.
+                {"true", true},
+                {"false", false},
+        };
+    }
+
+    @Test(dataProvider = "enforceLiteralCharactersConfig")
+    public void testIsLiteralCharactersEnforcedInCallback(String configValue, boolean expected) {
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(OAuthConstants.ENFORCE_LITERAL_CHARACTERS_IN_CALLBACK))
+                .thenReturn(configValue);
+        assertEquals(OAuth2Util.isLiteralCharactersEnforcedInCallback(), expected);
+    }
 }

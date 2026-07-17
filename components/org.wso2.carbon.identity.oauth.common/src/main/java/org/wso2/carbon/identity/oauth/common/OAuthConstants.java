@@ -133,6 +133,8 @@ public final class OAuthConstants {
     public static final String ENABLE_HYBRID_FLOW_APPLICATION_LEVEL_VALIDATION = "OAuth.OpenIDConnect" +
             ".EnableHybridFlowAppLevelValidation";
     public static final String RESTRICT_FRAGMENT_COMPONENTS = "OAuth.Callback.RestrictFragmentComponents";
+    public static final String ENFORCE_LITERAL_CHARACTERS_IN_CALLBACK =
+            "OAuth.Callback.EnforceLiteralCharacters";
 
     /**
      * Enum for OIDC supported subject types.

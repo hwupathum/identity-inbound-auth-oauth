@@ -665,4 +665,56 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         method.setAccessible(true);
         return method.invoke(object, params);
     }
+
+    private void mockKeystores() throws IdentityKeyStoreResolverException, KeyStoreException {
+
+        IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                TestUtil.loadKeyStoreFromFileSystem(TestUtil.getFilePath("wso2carbon.jks"), "wso2carbon", "JKS")
+                        .getCertificate("wso2carbon"));
+        when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                TestUtil.loadKeyStoreFromFileSystem(TestUtil.getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
+
+        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(identityKeyStoreResolver);
+    }
+
+    @DataProvider(name = "postLogoutUriValidation")
+    public Object[][] postLogoutUriValidation() {
+
+        String multiUriRegexCallback = "regexp=(https://good.example.com/cb1|https://good.example.com/cb2)";
+        return new Object[][]{
+                // registeredCallbackUri, postLogoutUri, expected
+                // Look-alike host must be rejected (the vulnerability being fixed).
+                {multiUriRegexCallback, "https://good-example.com/cb1", false},
+                // Legitimate registered hosts are still accepted.
+                {multiUriRegexCallback, "https://good.example.com/cb1", true},
+                {multiUriRegexCallback, "https://good.example.com/cb2", true},
+                // Unrelated host rejected.
+                {multiUriRegexCallback, "https://evil.com/cb1", false},
+                // Empty post logout URI is allowed.
+                {multiUriRegexCallback, "", true},
+                // Plain (non-regex) callback: exact match accepted, look-alike rejected.
+                {"https://good.example.com/cb", "https://good.example.com/cb", true},
+                {"https://good.example.com/cb", "https://good-example.com/cb", false},
+        };
+    }
+
+    @Test(dataProvider = "postLogoutUriValidation")
+    public void testValidatePostLogoutUri(String registeredCallbackUri, String postLogoutUri, boolean expected)
+            throws Exception {
+
+        oAuth2Util.when(OAuth2Util::isLiteralCharactersEnforcedInCallback).thenReturn(true);
+        oAuth2Util.when(() -> OAuth2Util.getRegexWithEnforcedLiteralCharacters(anyString())).thenCallRealMethod();
+
+        Method method = OIDCLogoutServlet.class
+                .getDeclaredMethod("validatePostLogoutUri", String.class, String.class);
+        method.setAccessible(true);
+        boolean result = (boolean) method.invoke(new OIDCLogoutServlet(), postLogoutUri, registeredCallbackUri);
+        assertEquals(result, expected, "Unexpected validation result for post_logout_redirect_uri '" +
+                postLogoutUri + "' against registered callback '" + registeredCallbackUri + "'.");
+    }
 }

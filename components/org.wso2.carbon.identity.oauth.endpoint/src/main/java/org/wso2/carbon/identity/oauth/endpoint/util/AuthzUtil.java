@@ -1822,19 +1822,19 @@ public class AuthzUtil {
 
         if (StringUtils.isNotEmpty(oauthProblemException.getError())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"error\" value=\"")
-                    .append(oauthProblemException.getError())
+                    .append(Encode.forHtml(oauthProblemException.getError()))
                     .append("\"/>\n");
         }
 
         if (StringUtils.isNotEmpty(oauthProblemException.getDescription())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"error_description\" value=\"")
-                    .append(oauthProblemException.getDescription())
+                    .append(Encode.forHtml(oauthProblemException.getDescription()))
                     .append("\"/>\n");
         }
 
         if (StringUtils.isNotEmpty(oauthProblemException.getState())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"state\" value=\"")
-                    .append(oauthProblemException.getState())
+                    .append(Encode.forHtml(oauthProblemException.getState()))
                     .append("\"/>\n");
         }
 

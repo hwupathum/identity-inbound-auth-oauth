@@ -107,25 +107,25 @@ public class FormPostResponseModeProvider extends AbstractResponseModeProvider {
         if (StringUtils.isNotEmpty(authorizationResponseDTO.getErrorResponseDTO()
                 .getError())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"error\" value=\"")
-                    .append(authorizationResponseDTO.getErrorResponseDTO().getError())
+                    .append(Encode.forHtml(authorizationResponseDTO.getErrorResponseDTO().getError()))
                     .append("\"/>\n");
         }
 
         if (StringUtils.isNotEmpty(authorizationResponseDTO.getErrorResponseDTO().getErrorDescription())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"error_description\" value=\"")
-                    .append(authorizationResponseDTO.getErrorResponseDTO().getErrorDescription())
+                    .append(Encode.forHtml(authorizationResponseDTO.getErrorResponseDTO().getErrorDescription()))
                     .append("\"/>\n");
         }
 
         if (StringUtils.isNotEmpty(authorizationResponseDTO.getSessionState())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"session_state\" value=\"")
-                    .append(authorizationResponseDTO.getSessionState())
+                    .append(Encode.forHtml(authorizationResponseDTO.getSessionState()))
                     .append("\"/>\n");
         }
 
         if (StringUtils.isNotEmpty(authorizationResponseDTO.getState())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"state\" value=\"")
-                    .append(authorizationResponseDTO.getState())
+                    .append(Encode.forHtml(authorizationResponseDTO.getState()))
                     .append("\"/>\n");
         }
 

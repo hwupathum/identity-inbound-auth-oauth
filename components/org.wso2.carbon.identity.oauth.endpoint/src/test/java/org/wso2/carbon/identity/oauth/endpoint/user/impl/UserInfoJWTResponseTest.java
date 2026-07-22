@@ -35,10 +35,12 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
@@ -48,6 +50,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -70,7 +73,7 @@ import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
  * Test class to test UserInfoJWTResponse.
  */
 @PrepareForTest({AuthorizationGrantCache.class, JDBCPersistenceManager.class,
-        OAuthServerConfiguration.class, FrameworkUtils.class})
+        OAuthServerConfiguration.class, FrameworkUtils.class, IdentityUtil.class})
 @PowerMockIgnore({"javax.management.*"})
 public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
@@ -323,6 +326,111 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
                         jwtClaimsSet.getClaim(expectedClaimEntry.getKey())
                             );
             }
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    /*
+     * Regression coverage for issue #7720 on the JWT UserInfo response: when an application uses an alternate
+     * subject identifier and the same opaque access token is reissued after the subject-source claim (email)
+     * changed, the persisted subject identifier on the token is stale while the fresh value is present in
+     * userClaims under OAuth2Util.SUB. The gate knob OAuth.RecomputeSubjectClaimForAlternateSubjectIdentifier
+     * controls whether the JWT sub returns the fresh value (knob on) or the stale persisted value (knob off).
+     */
+
+    private JWTClaimsSet buildUserInfoForRecomputeScenario(String subjectClaimUri,
+                                                           boolean includeFreshSubInClaims,
+                                                           boolean enableKnob) throws Exception {
+
+        AuthenticatedUser authzUser = new AuthenticatedUser();
+        authzUser.setUserName(AUTHORIZED_USER_NAME);
+        authzUser.setTenantDomain(TENANT_DOT_COM);
+        authzUser.setUserStoreDomain(JDBC_DOMAIN);
+        authzUser.setUserId(AUTHORIZED_USER_ID);
+        // Persisted (stale) subject identifier as stored on the reissued access token.
+        authzUser.setAuthenticatedSubjectIdentifier(STALE_SUBJECT_VALUE);
+
+        Map<String, Object> inputClaims = new HashMap<>();
+        inputClaims.put(email, FRESH_SUBJECT_VALUE);
+        if (includeFreshSubInClaims) {
+            inputClaims.put(OAuth2Util.SUB, FRESH_SUBJECT_VALUE);
+        }
+
+        prepareForSubjectClaimTest(authzUser, inputClaims, false, false, false);
+        if (subjectClaimUri != null) {
+            setAlternateSubjectClaimUri(subjectClaimUri);
+        }
+        mockObjectsRelatedToTokenValidation();
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                .thenReturn(authzUser.getUserId());
+        when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
+        userInfoJWTResponse = spy(new UserInfoJWTResponse());
+        when(userInfoJWTResponse.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
+                .thenReturn(inputClaims);
+        mockStatic(JDBCPersistenceManager.class);
+        DataSource dataSource = mock(DataSource.class);
+        JDBCPersistenceManager jdbcPersistenceManager = mock(JDBCPersistenceManager.class);
+        Mockito.when(dataSource.getConnection()).thenReturn(con);
+        Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
+        Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+        if (enableKnob) {
+            enableRecomputeSubjectClaimKnob();
+        }
+
+        String responseString =
+                userInfoJWTResponse.getResponseString(getTokenResponseDTO(authzUser.toFullQualifiedUsername()));
+        JWT jwt = JWTParser.parse(responseString);
+        assertNotNull(jwt);
+        assertNotNull(jwt.getJWTClaimsSet());
+        return jwt.getJWTClaimsSet();
+    }
+
+    @Test
+    public void testSubjectRecomputedForAlternateSubjectWhenKnobEnabled() throws Exception {
+
+        try {
+            JWTClaimsSet claimsSet = buildUserInfoForRecomputeScenario(ALTERNATE_SUBJECT_CLAIM_URI, true, true);
+            // Knob on: sub reflects the fresh subject-source claim value, matching the ID token sub.
+            assertEquals(claimsSet.getSubject(), FRESH_SUBJECT_VALUE);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @Test
+    public void testSubjectStaleForAlternateSubjectWhenKnobDisabled() throws Exception {
+
+        try {
+            JWTClaimsSet claimsSet = buildUserInfoForRecomputeScenario(ALTERNATE_SUBJECT_CLAIM_URI, true, false);
+            // Knob off (default): behaviour is byte-identical to the unpatched pack - sub stays stale.
+            assertEquals(claimsSet.getSubject(), STALE_SUBJECT_VALUE);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @Test
+    public void testSubjectUnchangedForDefaultSubjectWhenKnobEnabled() throws Exception {
+
+        try {
+            // No alternate subject identifier configured (blank subject claim URI) -> knob branch is a no-op.
+            JWTClaimsSet claimsSet = buildUserInfoForRecomputeScenario(null, true, true);
+            assertEquals(claimsSet.getSubject(), STALE_SUBJECT_VALUE);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @Test
+    public void testSubjectFallsBackWhenSubClaimAbsentWithKnobEnabled() throws Exception {
+
+        try {
+            // Alternate subject configured and knob on, but the subject claim is absent from userClaims
+            // (e.g. not a requested claim) -> fall back to the persisted identifier, no NPE.
+            JWTClaimsSet claimsSet = buildUserInfoForRecomputeScenario(ALTERNATE_SUBJECT_CLAIM_URI, false, true);
+            assertEquals(claimsSet.getSubject(), STALE_SUBJECT_VALUE);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }

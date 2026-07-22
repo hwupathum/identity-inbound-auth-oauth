@@ -17,6 +17,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -25,6 +26,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -57,6 +59,9 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params
 public abstract class AbstractUserInfoResponseBuilder implements UserInfoResponseBuilder {
 
     private static final Log log = LogFactory.getLog(AbstractUserInfoResponseBuilder.class);
+
+    private static final String RECOMPUTE_SUBJECT_CLAIM_FOR_ALTERNATE_SUBJECT_IDENTIFIER =
+            "OAuth.RecomputeSubjectClaimForAlternateSubjectIdentifier";
 
     @Override
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
@@ -189,6 +194,17 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                      String spTenantDomain,
                                      OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
+
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(RECOMPUTE_SUBJECT_CLAIM_FOR_ALTERNATE_SUBJECT_IDENTIFIER))) {
+            ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig().getSubjectClaimUri();
+            if (StringUtils.isNotBlank(subjectClaimUri)) {
+                Object subjectClaimValue = userClaims.get(OAuth2Util.SUB);
+                if (subjectClaimValue != null && StringUtils.isNotBlank(subjectClaimValue.toString())) {
+                    return subjectClaimValue.toString();
+                }
+            }
+        }
 
         AuthenticatedUser authenticatedUser;
         try {

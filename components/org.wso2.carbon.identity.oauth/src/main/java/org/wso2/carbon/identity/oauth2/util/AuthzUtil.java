@@ -415,12 +415,7 @@ public class AuthzUtil {
                     userGroupNames.add(groupName);
                 }
             }
-        } catch (IdentityOAuth2Exception e) {
-            throw new IdentityOAuth2Exception(e.getMessage(), e);
-        } catch (UserStoreException e) {
-            if (isDoGetGroupListOfUserNotImplemented(e)) {
-                return userGroupNames;
-            }
+        } catch (IdentityOAuth2Exception | UserStoreException e) {
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
         if (LOG.isDebugEnabled()) {
@@ -444,8 +439,8 @@ public class AuthzUtil {
             return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
                     .getRoleIdListOfGroupNames(groupNames, tenantDomain);
         } catch (IdentityRoleManagementException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving role id list of groups : "
-                    + StringUtils.join(groupNames, ",") + "tenant domain : " + tenantDomain, e);
+            throw new IdentityOAuth2Exception("Error while retrieving role id list of group names: "
+                    + StringUtils.join(groupNames, ",") + "tenant domain: " + tenantDomain, e);
         }
     }
 

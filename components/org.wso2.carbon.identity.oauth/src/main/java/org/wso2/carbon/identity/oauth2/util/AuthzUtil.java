@@ -407,7 +407,7 @@ public class AuthzUtil {
             String separator = resolveMultiAttributeSeparator(userStoreManager
                     .getSecondaryUserStoreManager(userStoreDomain));
 
-            String[] groupNames = groupNamesString.split(separator);
+            String[] groupNames = StringUtils.splitByWholeSeparator(groupNamesString, separator);
             for (String groupName : groupNames) {
                 String groupDomainName = UserCoreUtil.extractDomainFromName(groupName);
                 if (!INTERNAL_DOMAIN.equalsIgnoreCase(groupDomainName) &&

@@ -409,11 +409,7 @@ public class AuthzUtil {
 
             String[] groupNames = StringUtils.splitByWholeSeparator(groupNamesString, separator);
             for (String groupName : groupNames) {
-                String groupDomainName = UserCoreUtil.extractDomainFromName(groupName);
-                if (!INTERNAL_DOMAIN.equalsIgnoreCase(groupDomainName) &&
-                        !APPLICATION_DOMAIN.equalsIgnoreCase(groupDomainName)) {
-                    userGroupNames.add(groupName);
-                }
+                userGroupNames.add(UserCoreUtil.addDomainToName(groupName, userStoreDomain));
             }
         } catch (IdentityOAuth2Exception | UserStoreException e) {
             throw new IdentityOAuth2Exception(e.getMessage(), e);

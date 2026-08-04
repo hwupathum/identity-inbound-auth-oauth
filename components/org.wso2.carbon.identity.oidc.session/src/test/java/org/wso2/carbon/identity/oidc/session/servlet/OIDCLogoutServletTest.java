@@ -666,22 +666,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         return method.invoke(object, params);
     }
 
-    private void mockKeystores() throws IdentityKeyStoreResolverException, KeyStoreException {
-
-        IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
-        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
-                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
-                TestUtil.loadKeyStoreFromFileSystem(TestUtil.getFilePath("wso2carbon.jks"), "wso2carbon", "JKS")
-                        .getCertificate("wso2carbon"));
-        when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
-                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
-                TestUtil.loadKeyStoreFromFileSystem(TestUtil.getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
-
-        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
-        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
-                .thenReturn(identityKeyStoreResolver);
-    }
-
     @DataProvider(name = "postLogoutUriValidation")
     public Object[][] postLogoutUriValidation() {
 
